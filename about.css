@@ -5,7 +5,12 @@
 img {
     max-width: 100%;
 }
-
+html {
+scrollbar-color: #293a56 #e9b4d2;
+/* Track / Background Color */ 
+    scrollbar-width: auto;
+/* Options: auto, thin */
+}
 
 h1, h2, h3, h4, h5 {
     font-family: "Playfair Display", sans-serif;

@@ -1,0 +1,770 @@
+/* ==================================================
+   DESIGN SYSTEM
+================================================== */
+* {
+    box-sizing: border-box;
+}
+img {
+    max-width: 100%;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+    font-family: "Playfair Display", sans-serif;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #F1F1F1;
+    color: #222225;
+}
+
+h1 {
+    font-size: 58px;
+    font-weight: 900;
+}
+
+a {
+    text-decoration: none;
+}
+
+p,
+a,
+h6 {
+    font-family: "Playfair Display", sans-serif;
+    font-weight: 500;
+}
+
+ul {
+    list-style: none;
+}
+
+
+/* ==================================================
+   HEADER
+================================================== */
+
+.header {
+    background-color: #DAE3F7;
+    padding: 2px;
+    border-bottom: 5px #041F54 solid;
+    font-weight: 600;
+}
+
+.nav-bar {
+    display: flex;
+    color: #061121;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0px 30px;
+}
+
+#FDI-Logo {
+    margin-bottom: 20px;
+    width: 70px;
+    display: flex;
+    flex-shrink: 1;
+    min-width: 50px;
+    margin-top: 10px;
+}
+
+.list ul {
+    display: flex;
+    list-style: none;
+    font-size: 16px;
+    gap: 1em;
+}
+
+a {
+    text-decoration: none;
+    color: #061121;
+}
+
+.list:hover {
+    color: #5580F9;
+}
+
+.list :active {
+    color: #5E7EEB;
+}
+
+.list:link {
+    color: #061121;
+}
+
+.list :visited {
+    color: #061121;
+}
+
+
+/* ==================================================
+   HERO
+================================================== */
+
+.body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 80vh;
+}
+
+
+
+.buttons {
+    display: flex;
+    gap: 1em;
+}
+
+.btn {
+    display: inline-block;
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 16px;
+    padding: 15px 30px;
+    border-radius: 8px;
+}
+
+.btn-primary {
+    background-color: #0D3C92;
+    color: #EEF0FE;
+    border: 1px solid #0D3C92;
+}
+
+.btn-secondary {
+    background-color: transparent;
+    color: #0D3C92;
+    border: 1.5px solid #0D3C92;
+}
+
+.btn-primary:hover {
+    background-color: #041F54;
+}
+
+.btn-secondary:hover {
+    background-color: #EEF0FE;
+}
+
+
+
+.partnership {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    gap: 15px;
+    border-radius: 10px;
+}
+
+.partnership-1 {
+    width: 70px;
+    border: 3.5px solid #5580F9;
+    margin: 20px 20px 20px 20px;
+}
+
+.partnership-2 {
+    width: 70px;
+    border: 3.5px #5580F9 solid;
+    margin: 20px 20px 20px 20px;
+}
+
+.Letter-X {
+    display: inline-block;
+    font-family: "Great Vibes";
+    font-weight: 900;
+    font-size: 35px;
+    margin: 35px 20px 20px 20px;
+    color: #4371B1;
+}
+
+h1 {
+    font-weight: 700;
+    color: #041F54;
+}
+
+
+/* ==================================================
+   QUOTE
+================================================== */
+
+.qoute {
+    background-color: #3B0000;
+    color: #FFEAEA;
+    border: #F60000 5px;
+    display: flex;
+    justify-content: space-around;
+    font-weight: 600;
+    font-size: 18px;
+    font-family: 'Times New Roman', Times, serif;
+}
+
+
+/* ==================================================
+   ANIMATIONS
+================================================== */
+
+.autoshow {
+    animation: text-appear both;
+    animation-timeline: view();
+    animation-range: entry 10% contain 40%;
+}
+
+@keyframes text-appear {
+    from {
+        opacity: 0;
+        transform: translateY(100px) scale(0.85);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.imagereveal {
+    animation: imageReveal both;
+    animation-timeline: view();
+    animation-range: entry 10% contain 40%;
+}
+
+@keyframes imageReveal {
+    from {
+        filter: saturate(0) contrast(4) brightness(.1) blur(5px);
+        opacity: 0;
+        scale: .95;
+        translate: 0 4rem;
+    }
+
+    to {
+        filter: none;
+        opacity: 1;
+        scale: 1;
+        translate: 0 0;
+    }
+}
+
+
+/* ==================================================
+   PROGRAM DESCRIPTION
+================================================== */
+
+.container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    background-color: #fff;
+    margin-top: 40px;
+    padding-bottom: 20px;
+}
+
+.container h2 {
+    grid-column: 1 / -1;
+    text-align: center;
+}
+
+
+.box-1 {
+    color: white;
+    background-color: #182E4C;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow:
+        0 4px 6px -1px rgb(0 0 0 / 0.05),
+        0 2px 4px -2px rgb(0 0 0 / 0.05);
+}
+
+
+.box-2 {
+    background-color: #740000;
+    padding: 30px;
+    border-radius: 20px;
+    color: #fff;
+    box-shadow:
+        0 4px 6px -1px rgb(0 0 0 / 0.05),
+        0 2px 4px -2px rgb(0 0 0 / 0.05);
+}
+
+
+
+
+.box-3 {
+    background-color: #DAE3F7;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow:
+        0 4px 6px -1px rgb(0 0 0 / 0.05),
+        0 2px 4px -2px rgb(0 0 0 / 0.05);
+}
+
+
+/* ==================================================
+   FOOTER
+================================================== */
+
+.footer {
+    background-color: #0C1D4B;
+    display: flex;
+    justify-content: space-between;
+    flex-direction: row;
+    margin-top: 25px;
+    border-top: #0a173d 3.5px solid;
+    padding: 60px 20px;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 10000px;
+}
+
+.header-footer {
+    margin: 20px;
+    color: #fff;
+}
+
+.list-a {
+    margin: 20px;
+    color: #CAD2FD;
+}
+
+.list-a ul li a {
+    color: #CAD2FD;
+}
+
+.list-a ul li a:hover {
+    color: #5580F9;
+}
+
+.list-a ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    gap: 12px;
+    flex-direction: column;
+}
+
+.footer-spacer {
+    flex-grow: 1;
+}
+
+
+/* ==================================================
+   INQUIRY FORM
+================================================== */
+
+.inquiry-form {
+    max-width: 550px;
+    margin: 40px auto;
+    padding: 40px;
+    background-color: #ffffff;
+    border-radius: 20px;
+    box-shadow:
+        0 10px 25px -5px rgba(0, 0, 0, 0.05),
+        0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    margin-left: auto;
+}
+
+.inquiry-form h2 {
+    color: #061121;
+    margin-top: 0;
+    margin-bottom: 24px;
+    font-size: 1.8rem;
+    letter-spacing: -0.01em;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #414146;
+}
+
+.form-group input,
+.form-group textarea {
+    font-size: 15px;
+    padding: 14px 16px;
+    background-color: #f8f9fa;
+    border: 1px solid #d4d4d5;
+    border-radius: 10px;
+    color: #222225;
+    outline: none;
+    transition: all 0.25s ease;
+    font-family: "Playfair Display", sans-serif;
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+    color: #acacaf;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    background-color: #ffffff;
+    border-color: #5580F9;
+    box-shadow: 0 0 0 4px rgba(85, 128, 249, 0.15);
+}
+
+.form-group textarea {
+    resize: vertical;
+}
+
+.submit-btn {
+    width: 100%;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 14px;
+    background-color: #182e4c;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: all 0.2s ease;
+}
+
+.submit-btn:hover {
+    background-color: #061121;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(6, 17, 33, 0.2);
+}
+
+.submit-btn:active {
+    transform: translateY(1px);
+}
+
+
+/* ==================================================
+   ABOUT PAGE
+================================================== */
+
+.page-2 {
+    background-color: #F1F1F1;
+}
+
+.about-us {
+    background-color: #041F54;
+}
+
+.about-us-h1 {
+    color: #EEF0FE;
+    font-size: 58px;
+    padding: 40px 20px;
+    margin: 0;
+}
+
+.buttons-2 {
+    margin-top: 25px;
+    margin-left: 25px;
+}
+
+
+/* ==================================================
+   WORKSHOP
+================================================== */
+
+.workshop-section {
+    background-color: #EEF0FE;
+}
+
+
+.schedule-card {
+    background-color: #FFFFFF;
+    border: 1px solid rgba(67, 113, 177, 0.25);
+    border-radius: 10px;
+    padding: 24px;
+    margin-top: 20px;
+    padding: 25px;
+}
+
+.schedule-badge {
+    display: inline-block;
+    background-color: #0D3C92;
+    color: #EEF0FE;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin-bottom: 12px;
+}
+
+.workshop-explanation-card-1 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+}
+
+.card-1-heading {
+    padding-left: 25px;
+    font-size: 28px;
+    margin: 20px 0 5px;
+}
+
+.card-1-answer {
+    background-color: #FFFFFF;
+    color: #222225;
+    border: 1px solid rgba(67, 113, 177, 0.25);
+    padding: 25px;
+    margin: 0 20px 20px;
+}
+
+.workshop-explanation-card-2 {
+    background-color: #EEF0FE;
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 20px;
+    align-items: stretch;
+}
+
+.card-2-picture {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border: 3px solid rgba(67, 113, 177, 0.25);
+    border-radius: 16px;
+    margin-bottom: 30px;
+    margin-left: 25px;
+}
+
+.card-2-venue-date-para {
+    background-color: #FFFFFF;
+    color: #222225;
+    border: 1px solid rgba(67, 113, 177, 0.25);
+    padding: 25px;
+    margin: 0 20px 20px;
+}
+
+
+/* ==================================================
+   FDI LINKS
+================================================== */
+
+.fdi-links-section {
+    background-color: #041F54;
+    padding: 50px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 40px;
+}
+
+.fdi-links-brand {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    max-width: 550px;
+}
+
+.fdi-links-logo {
+    width: 90px;
+    height: 90px;
+    object-fit: contain;
+    background-color: #FFFFFF;
+    border-radius: 50%;
+    padding: 6px;
+}
+
+.fdi-links-title h2 {
+    color: #EEF0FE;
+    font-size: 30px;
+    margin: 0 0 8px;
+}
+
+.fdi-links-title p {
+    color: #CAD2FD;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.fdi-social-links {
+    display: flex;
+    gap: 14px;
+}
+
+.fdi-social-card {
+    min-width: 150px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background-color: rgba(238, 240, 254, 0.08);
+    border: 1px solid rgba(202, 210, 253, 0.25);
+    border-radius: 14px;
+    transition: 0.2s ease;
+}
+
+.fdi-social-card:hover {
+    background-color: #0D3C92;
+    border-color: #A2BBED;
+    transform: translateY(-3px);
+}
+
+.social-icon {
+    width: 27px;
+    height: 27px;
+    fill: none;
+    stroke: #A2BBED;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+}
+
+.fdi-social-card:first-child .social-icon {
+    fill: #A2BBED;
+    stroke: none;
+}
+
+.social-label {
+    display: block;
+    color: #EEF0FE;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.social-text {
+    display: block;
+    color: #CAD2FD;
+    font-size: 13px;
+    margin-top: 3px;
+}
+
+
+/* ==================================================
+   RESPONSIVE / MOBILE
+================================================== */
+
+@media (max-width: 768px) {
+    .CTA {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+}
+
+@media (max-width: 900px) {
+
+    .fdi-links-section {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 40px 25px;
+    }
+
+    .fdi-social-links {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .fdi-social-card {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+/* ==================================================
+   MOBILE - HOME PAGE
+================================================== */
+
+@media (max-width: 768px) {
+
+    /* HERO */
+
+    .body {
+        padding: 30px 20px;
+    }
+
+    .body h1 {
+        font-size: 40px !important;
+    }
+
+    .buttons {
+        flex-direction: column;
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .btn {
+        text-align: center;
+        width: 100%;
+    }
+
+
+    /* PARTNERSHIP */
+
+    .partnership {
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .partnership-1,
+    .partnership-2 {
+        width: 55px;
+        margin: 15px 8px;
+    }
+
+    .Letter-X {
+        margin: 20px 8px;
+        font-size: 28px;
+    }
+
+
+    /* PROGRAMS */
+
+    .container {
+        grid-template-columns: 1fr;
+        padding: 20px;
+    }
+
+
+    /* WORKSHOP */
+
+    .workshop-explanation-card-2 {
+        grid-template-columns: 1fr;
+        padding: 0 20px;
+    }
+
+    .card-2-picture {
+        margin-left: 0;
+        margin-bottom: 0;
+        width: 100%;
+        height: auto;
+    }
+
+    .card-2-venue-date-para {
+        margin: 0 0 20px;
+    }
+
+    .card-1-answer {
+        margin: 0 20px 20px;
+    }
+
+
+    /* FOOTER */
+
+    .footer {
+        flex-direction: column;
+        gap: 25px;
+    }
+
+    .footer-spacer {
+        display: none;
+    }
+
+    .inquiry-form {
+        width: 100%;
+        margin: 0;
+        padding: 25px;
+    }
+
+}

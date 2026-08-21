@@ -1,0 +1,510 @@
+
+* {
+    box-sizing: border-box;
+}
+
+img {
+    max-width: 100%;
+}
+
+.empty-space-team {
+margin-bottom: 100px;
+}
+
+.team-title-para {
+color: #F1F1F1;
+padding-left: 35px;
+margin-top: 0;
+padding-bottom: 25px;
+
+}
+
+.about-us-h1-2 {
+    color: #EEF0FE;
+    font-size: 58px;
+    padding-left: 25px;
+    padding-top: 25px;
+    margin: 0;
+
+  
+}
+
+.team-line {
+    width: 90px;
+    height: 3px;
+    background-color: #A2BBED;
+    margin-top: 12px; 
+    margin-left: 35px;
+    margin-bottom: 15px;
+}
+
+.team-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin: 20px;
+}
+
+/* PRESIDENCY */
+.presidency-box {
+    background-color: #041F54;
+    color: #EEF0FE;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    border-radius: 20px;
+}
+
+.presidency-title {
+    color: #EEF0FE;
+    font-size: 25px;
+    margin: 0;
+}
+
+.presidency-title::after {
+    content: "";
+    display: block;
+    width: 45px;
+    height: 2px;
+    background-color: #A2BBED;
+    margin-top: 8px;
+}
+
+.list-presidency {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 0;
+    margin: 24px 0 0;
+}
+
+.president-box,
+.co-president-box {
+    background-color: #0D3C92;
+    border: 1px solid rgba(202, 210, 253, 0.3);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    transition: 0.2s ease;
+}
+
+.president-box:hover,
+.co-president-box:hover {
+    transform: translateY(-2px);
+    border-color: #CAD2FD;
+}
+/* GENERAL */
+.member-role {
+    font-size: 15px;
+    color: #CAD2FD;
+}
+
+.member-name {
+    font-size: 19px;
+    font-weight: 600;
+    color: #FFFFFF;
+}
+/* OPERATIONS */
+.operations-box {
+    background-color: #182E4C;
+    color: #F1F1F1;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    border-radius: 20px;
+}
+.head-of-operations-box,
+.deputy-of-operations-box {
+    background-color: #1f3c63;
+    border: 1px solid rgba(202, 210, 253, 0.3);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    transition: 0.2s ease;
+}
+
+.list-operations {
+list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 0;
+    margin: 24px 0 0;
+}
+/* ORGANIZATION */
+
+.organization-box {
+    background-color: #A2BBED;
+    color: #222225;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    border-radius: 20px;
+}
+
+.list-organization {
+list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 0;
+    margin: 24px 0 0;
+}
+
+.head-of-organization-box,
+.deputy-of-organization-box {
+    background-color: #84aaf5;
+    border: 1px solid #749ded;
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    transition: 0.2s ease;
+    color: #222225;
+}
+/* EDUCATION */
+.education-box {
+    background-color: #740000;
+    color: #FFEAEA;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    border-radius: 20px;
+}
+
+.list-education {
+list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 0;
+    margin: 24px 0 0;
+}
+
+.co-head-of-education-box {
+    background-color: #8F1D1D;
+    border: 1px solid rgba(202, 210, 253, 0.3);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    transition: 0.2s ease;
+    color: #FFEAEA;
+}
+.department-title-light,
+.department-title-dark {
+    font-size: 25px;
+    margin: 0;
+}
+
+.department-title-light {
+    color: #EEF0FE;
+}
+
+.department-title-dark {
+    color: #061121;
+}
+
+/* MEDIA */
+
+.media-box {
+    background-color: #1a68db;
+    color: #EEF0FE;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    border-radius: 20px;
+}
+
+.media-title {
+    color: #EEF0FE;
+    font-size: 25px;
+    margin: 0;
+}
+
+.media-title::after {
+    content: "";
+    display: block;
+    width: 45px;
+    height: 2px;
+    background-color: #A2BBED;
+    margin-top: 8px;
+}
+
+.list-media {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 0;
+    margin: 24px 0 0;
+}
+
+.head-of-media-box, 
+.deputy-of-media-box {
+    background-color: #1161d9;
+    border: 1px solid #A2BBED;
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 6px 16px #1161d9;
+    transition: 0.2s ease;
+    color: #EEF0FE;
+}
+
+/* Marketing */
+
+.marketing-box {
+    background-color: #0c1f3d;
+    color: #EEF0FE;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    border-radius: 20px;
+}
+
+.marketing-title {
+    color: #EEF0FE;
+    font-size: 25px;
+    margin: 0;
+}
+
+.marketing-title::after {
+    content: "";
+    display: block;
+    width: 45px;
+    height: 2px;
+    background-color: #A2BBED;
+    margin-top: 8px;
+}
+
+.list-marketing {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 0;
+    margin: 24px 0 0;
+}
+
+.head-of-marketing-box, 
+.deputy-of-marketing-box {
+    background-color: #2D4E7D;
+    border: 1px solid #A2BBED;
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    transition: 0.2s ease;
+    color: #EEF0FE;
+}
+
+/* DESCRIPTION SECTION */
+
+.team-text-heading {
+    background-color: #041F54;
+    color: #EEF0FE;
+    border: 1px solid #CAD2FD;
+    margin-top: 25px;
+    max-height: 4em;
+padding: 25px;
+}
+
+.team-text-para {
+background-color: #FFFFFF;
+color: #222225;
+border: 1px solid rgba(67, 113, 177, 0.25);
+padding: 20px;
+margin: 40px 25px 40px 25px;
+}
+/* FDI LINKS SECTION */
+
+.fdi-links-section {
+    background-color: #041F54;
+    padding: 50px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 40px;
+}
+
+.fdi-links-brand {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    max-width: 550px;
+}
+
+.fdi-links-logo {
+    width: 90px;
+    height: 90px;
+    object-fit: contain;
+    background-color: #FFFFFF;
+    border-radius: 50%;
+    padding: 6px;
+}
+
+.fdi-links-title h2 {
+    color: #EEF0FE;
+    font-size: 30px;
+    margin: 0 0 8px;
+}
+
+.fdi-links-title p {
+    color: #CAD2FD;
+    line-height: 1.5;
+    margin: 0;
+}
+
+
+.fdi-social-links {
+    display: flex;
+    gap: 14px;
+}
+
+
+.fdi-social-card {
+    min-width: 150px;
+    padding: 16px 18px;
+
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    background-color: rgba(238, 240, 254, 0.08);
+    border: 1px solid rgba(202, 210, 253, 0.25);
+    border-radius: 14px;
+
+    transition: 0.2s ease;
+}
+
+
+.fdi-social-card:hover {
+    background-color: #0D3C92;
+    border-color: #A2BBED;
+    transform: translateY(-3px);
+}
+
+
+.social-icon {
+    width: 27px;
+    height: 27px;
+
+    fill: none;
+    stroke: #A2BBED;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+
+    flex-shrink: 0;
+}
+
+
+.fdi-social-card:first-child .social-icon {
+    fill: #A2BBED;
+    stroke: none;
+}
+
+
+.social-label {
+    display: block;
+    color: #EEF0FE;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+
+.social-text {
+    display: block;
+    color: #CAD2FD;
+    font-size: 13px;
+    margin-top: 3px;
+}
+
+
+/* MOBILE */
+
+@media (max-width: 900px) {
+
+    .fdi-links-section {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 40px 25px;
+    }
+
+    .fdi-social-links {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .fdi-social-card {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+}
+
+/* ==================================================
+   MOBILE - TEAM PAGE
+================================================== */
+
+@media (max-width: 768px) {
+
+    /* TEAM HERO */
+
+    .about-us-h1-2 {
+        font-size: 40px;
+        padding-left: 20px;
+        padding-top: 30px;
+    }
+
+    .team-line {
+        margin-left: 20px;
+    }
+
+    .team-title-para {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+
+    /* TEAM INTRODUCTION */
+
+    .team-text-section {
+        padding: 20px;
+    }
+
+    .team-text-heading {
+        font-size: 30px;
+    }
+
+    .team-text-para {
+        width: 100%;
+    }
+
+
+    /* TEAM DEPARTMENTS */
+
+    .team-container {
+        grid-template-columns: 1fr;
+        margin: 20px;
+        gap: 20px;
+    }
+
+}

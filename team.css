@@ -12,6 +12,7 @@ p {
 html {
     scrollbar-color: #0D3C92 #DAE3F7;
     scrollbar-width: auto;
+    scroll-behavior: smooth;
 }
 
 .empty-space-team {

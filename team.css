@@ -320,11 +320,10 @@ list-style: none;
     background-color: #041F54;
     color: #EEF0FE;
     border: 1px solid #CAD2FD;
-    margin-top: 25px;
+    margin: 25px 25px 0;
     max-height: 4em;
-padding: 25px;
+    padding: 25px;
 }
-
 .team-text-para {
 background-color: #FFFFFF;
 color: #222225;
@@ -341,6 +340,7 @@ margin: 40px 25px 40px 25px;
     justify-content: space-between;
     align-items: center;
     gap: 40px;
+    
 }
 
 .fdi-links-brand {

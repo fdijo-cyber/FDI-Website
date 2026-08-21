@@ -11,6 +11,11 @@ img {
 p {
    text-wrap:pretty;
 }
+
+html {
+scroll-behavior: smooth;
+}
+
 h1,
 h2,
 h3,

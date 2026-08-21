@@ -7,10 +7,8 @@ img {
     max-width: 100%;
 }
 html {
-scrollbar-color: #293a56 #e9b4d2;
-/* Track / Background Color */ 
+    scrollbar-color: #0D3C92 #DAE3F7;
     scrollbar-width: auto;
-/* Options: auto, thin */
 }
 
 .empty-space-team {

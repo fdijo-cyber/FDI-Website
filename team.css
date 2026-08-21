@@ -6,6 +6,12 @@
 img {
     max-width: 100%;
 }
+html {
+scrollbar-color: #293a56 #e9b4d2;
+/* Track / Background Color */ 
+    scrollbar-width: auto;
+/* Options: auto, thin */
+}
 
 .empty-space-team {
 margin-bottom: 100px;

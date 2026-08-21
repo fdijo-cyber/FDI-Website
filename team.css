@@ -6,6 +6,9 @@
 img {
     max-width: 100%;
 }
+p {
+   text-wrap:pretty;
+}
 html {
     scrollbar-color: #0D3C92 #DAE3F7;
     scrollbar-width: auto;

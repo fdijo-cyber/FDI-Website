@@ -15,7 +15,12 @@ h4,
 h5 {
     font-family: "Playfair Display", sans-serif;
 }
-
+html {
+scrollbar-color: #293a56 #e9b4d2;
+/* Track / Background Color */ 
+   scrollbar-width: auto;
+/* Options: auto, thin */
+}
 body {
     margin: 0;
     padding: 0;

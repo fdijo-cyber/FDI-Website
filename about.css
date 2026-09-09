@@ -680,5 +680,213 @@ padding-left: 1em;
         margin: 0;
         padding: 25px;
     }
+/* ============================= */
+/* FDI AI CHAT WIDGET */
+/* ============================= */
 
+#fdi-ai-button {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+
+    width: 62px;
+    height: 62px;
+
+    border: none;
+    border-radius: 50%;
+
+    background: linear-gradient(
+        135deg,
+        #041F54,
+        #5580F9
+    );
+
+    color: #ffffff;
+
+    font-family: "Playfair Display", sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 8px 25px rgba(4, 31, 84, 0.28);
+
+    z-index: 9998;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+#fdi-ai-button:hover {
+    transform: translateY(-3px);
+
+    box-shadow:
+        0 12px 30px rgba(4, 31, 84, 0.35);
+}
+
+#fdi-ai-button:active {
+    transform: translateY(0);
+}
+
+
+/* ============================= */
+/* CHAT PANEL */
+/* ============================= */
+
+#fdi-ai-panel {
+    position: fixed;
+
+    top: 0;
+    right: -430px;
+
+    width: 410px;
+    max-width: 100%;
+
+    height: 100dvh;
+
+    background-color: #ffffff;
+
+    border-left: 3px solid #041F54;
+
+    box-shadow:
+        -12px 0 35px rgba(6, 17, 33, 0.15);
+
+    z-index: 9999;
+
+    display: flex;
+    flex-direction: column;
+
+    transition: right 0.35s ease;
+}
+
+
+/* Open state */
+
+#fdi-ai-panel.open {
+    right: 0;
+}
+
+
+/* ============================= */
+/* PANEL HEADER */
+/* ============================= */
+
+.fdi-ai-panel-header {
+    background-color: #DAE3F7;
+
+    border-bottom: 4px solid #041F54;
+
+    min-height: 76px;
+
+    padding: 15px 18px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    color: #041F54;
+}
+
+.fdi-ai-panel-header div {
+    display: flex;
+    flex-direction: column;
+}
+
+.fdi-ai-panel-header strong {
+    font-family: "Playfair Display", sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.fdi-ai-panel-header span {
+    margin-top: 3px;
+
+    font-size: 12px;
+
+    color: #4371B1;
+}
+
+
+/* ============================= */
+/* CLOSE BUTTON */
+/* ============================= */
+
+#fdi-ai-close {
+    border: none;
+    background: transparent;
+
+    color: #041F54;
+
+    font-size: 32px;
+    line-height: 1;
+
+    cursor: pointer;
+
+    padding: 4px 8px;
+
+    transition:
+        transform 0.2s ease,
+        color 0.2s ease;
+}
+
+#fdi-ai-close:hover {
+    color: #5580F9;
+    transform: scale(1.08);
+}
+
+
+/* ============================= */
+/* CHAT IFRAME */
+/* ============================= */
+
+#fdi-ai-frame {
+    width: 100%;
+
+    flex: 1;
+
+    border: none;
+
+    background: #F1F1F1;
+}
+
+
+/* ============================= */
+/* MOBILE */
+/* ============================= */
+
+@media (max-width: 600px) {
+
+    #fdi-ai-panel {
+        width: 100%;
+        right: -100%;
+
+        border-left: none;
+    }
+
+    #fdi-ai-panel.open {
+        right: 0;
+    }
+
+    #fdi-ai-button {
+        width: 56px;
+        height: 56px;
+
+        right: 16px;
+        bottom: 16px;
+
+        font-size: 14px;
+    }
+
+    .fdi-ai-panel-header {
+        min-height: 68px;
+
+        padding: 12px 15px;
+    }
+
+    .fdi-ai-panel-header strong {
+        font-size: 16px;
+    }
+}
 }

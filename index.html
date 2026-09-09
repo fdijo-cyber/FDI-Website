@@ -509,6 +509,21 @@ aiClose.addEventListener("click", () => {
     aiPanel.classList.remove("open");
 });
 </script>
+
+    		<!-- Chat app script -->
+		<script src="chat.js"></script>
+
+		<!-- Embedded widget mode -->
+		<script>
+			const params = new URLSearchParams(window.location.search);
+
+			if (params.get("embed") === "1") {
+				document.body.classList.add("embedded");
+			}
+		</script>
+
+	</body>
+</html>
 </body>
 
 </html>

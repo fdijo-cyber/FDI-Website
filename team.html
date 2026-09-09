@@ -749,6 +749,51 @@
         </div>
 
     </footer>
+<!-- rest of page -->
+
+<!-- FDI AI CHAT WIDGET -->
+
+<button id="fdi-ai-button" aria-label="Open FDI AI Assistant">
+    AI
+</button>
+
+<div id="fdi-ai-panel">
+
+    <div class="fdi-ai-panel-header">
+        <div>
+            <strong>FDI Assistant</strong>
+            <span>Ask us anything</span>
+        </div>
+
+        <button id="fdi-ai-close" aria-label="Close chat">
+            ×
+        </button>
+    </div>
+
+    <iframe
+        src="https://fdi-ai2.ghandishihab1.workers.dev/?embed=1"
+        id="fdi-ai-frame"
+        title="FDI AI Assistant">
+    </iframe>
+
+</div>
+
+<script>
+const aiButton = document.getElementById("fdi-ai-button");
+const aiPanel = document.getElementById("fdi-ai-panel");
+const aiClose = document.getElementById("fdi-ai-close");
+
+aiButton.addEventListener("click", () => {
+    aiPanel.classList.add("open");
+});
+
+aiClose.addEventListener("click", () => {
+    aiPanel.classList.remove("open");
+});
+</script>
+
+</body>
+</html>
 
 </body>
 

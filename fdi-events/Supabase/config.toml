@@ -1,0 +1,16 @@
+project_id = "fdi-events"
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+[db]
+port = 54322
+major_version = 17
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173/auth/callback"]
+enable_signup = false

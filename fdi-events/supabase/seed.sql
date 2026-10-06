@@ -3,3 +3,4 @@ values('a11fd100-0000-4000-8000-000000000001','FDI BFA Workshop','BFA Workshop',
 on conflict(id) do nothing;
 -- Bootstrap a real owner after creating their Supabase Auth user:
 -- insert into public.staff(user_id,email,role) select id,email,'SUPER_ADMIN' from auth.users where email='YOUR_OWNER_EMAIL';
+-- Trigger Supabase production deployment

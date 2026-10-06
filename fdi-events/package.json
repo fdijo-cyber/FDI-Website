@@ -1,0 +1,41 @@
+{
+  "name": "fdi-events",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "dev:api": "wrangler dev --port 8787",
+    "deploy": "npm run build && wrangler deploy",
+    "test:e2e": "node --import tsx tests/browser-check.mjs"
+  },
+  "dependencies": {
+    "@pdf-lib/fontkit": "^1.1.1",
+    "@supabase/supabase-js": "^2.57.0",
+    "@zxing/browser": "^0.1.5",
+    "lucide-react": "^0.468.0",
+    "papaparse": "^5.5.3",
+    "pdf-lib": "^1.17.1",
+    "qrcode": "^1.5.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261001.1",
+    "@electric-sql/pglite": "^0.3.10",
+    "@playwright/test": "^1.56.1",
+    "@types/papaparse": "^5.3.16",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.1.0",
+    "wrangler": "^4.40.0"
+  }
+}

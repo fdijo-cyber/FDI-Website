@@ -14,22 +14,45 @@ const jwt = (id: string) =>
     JSON.stringify({
       sub: id,
       role: "authenticated",
-      aal: "aal1",
+      aal: "aal2",
       exp: Math.floor(Date.now() / 1000) + 3600,
     }),
   ).toString("base64url") +
   ".test-only-signature";
 export const ownerToken = jwt(testOwner),
   staffToken = jwt(testStaff);
+export const ownerAal1Token =
+  ownerToken.split(".")[0] +
+  "." +
+  Buffer.from(
+    JSON.stringify({
+      ...JSON.parse(
+        Buffer.from(ownerToken.split(".")[1], "base64url").toString(),
+      ),
+      aal: "aal1",
+    }),
+  ).toString("base64url") +
+  ".test-only-signature";
 export async function harness() {
+  const authState = { verified: true };
+  const uploads: { path: string; type: string | null; size: number }[] = [];
   const db = new PGlite();
   await db.exec(
     `create schema auth;create table auth.users(id uuid primary key,email text,last_sign_in_at timestamptz);create role anon;create role authenticated;create role service_role bypassrls;insert into auth.users(id,email) values('${testOwner}','owner@example.com'),('${testStaff}','scanner@example.com');`,
   );
   await db.exec(readFileSync("supabase/migrations/001_platform.sql", "utf8"));
+  await db.exec(
+    readFileSync(
+      "supabase/migrations/003_identity_security_event_media.sql",
+      "utf8",
+    ),
+  );
   await db.exec(readFileSync("supabase/seed.sql", "utf8"));
   await db.exec(
     `insert into staff(user_id,email,role) values('${testOwner}','owner@example.com','SUPER_ADMIN'),('${testStaff}','scanner@example.com','CHECK_IN_STAFF');insert into staff_events values('${testStaff}','${testEvent}');`,
+  );
+  await db.exec(
+    "update staff set terms_version='2026-10-07',terms_accepted_at=now()",
   );
   await db.exec(
     "update events set certificate_template_url='https://fdi-test.supabase.co/storage/v1/object/public/certificate-templates/test.pdf'",
@@ -70,7 +93,7 @@ export async function harness() {
         : testOwner;
     if (
       u.pathname === "/auth/v1/user" &&
-      ![ownerToken, staffToken].includes(
+      ![ownerToken, staffToken, ownerAal1Token].includes(
         request.headers.get("Authorization")?.replace("Bearer ", "") ?? "",
       )
     )
@@ -83,6 +106,15 @@ export async function harness() {
         id: userId,
         email:
           userId === testStaff ? "scanner@example.com" : "owner@example.com",
+        factors: authState.verified
+          ? [
+              {
+                id: "44444444-4444-4444-8444-444444444444",
+                factor_type: "totp",
+                status: "verified",
+              },
+            ]
+          : [],
         app_metadata: { provider: "email" },
         user_metadata: {},
         aud: "authenticated",
@@ -109,6 +141,16 @@ export async function harness() {
           { status: 400, headers: { "Content-Type": "application/json" } },
         );
       }
+    } else if (
+      u.pathname.startsWith("/storage/v1/object/event-media/") &&
+      request.method === "POST"
+    ) {
+      uploads.push({
+        path: u.pathname,
+        type: request.headers.get("Content-Type"),
+        size: (await request.arrayBuffer()).byteLength,
+      });
+      data = { Key: u.pathname.split("/object/")[1] };
     } else throw new Error("Unsupported harness request: " + u.pathname);
     return new Response(JSON.stringify(data), {
       headers: { "Content-Type": "application/json" },
@@ -116,6 +158,8 @@ export async function harness() {
   };
   return {
     db,
+    authState,
+    uploads,
     person,
     token,
     qr,

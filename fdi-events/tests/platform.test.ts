@@ -61,6 +61,12 @@ before(async () => {
     `create schema auth;create table auth.users(id uuid primary key,email text,last_sign_in_at timestamptz);create role anon;create role authenticated;create role service_role bypassrls;insert into auth.users(id,email) values('${owner}','owner@example.com'),('${staff}','staff@example.com'),('${manager}','manager@example.com');`,
   );
   await db.exec(readFileSync("supabase/migrations/001_platform.sql", "utf8"));
+  await db.exec(
+    readFileSync(
+      "supabase/migrations/003_identity_security_event_media.sql",
+      "utf8",
+    ),
+  );
   await db.exec(readFileSync("supabase/seed.sql", "utf8"));
   await db.exec(
     `insert into staff(user_id,email,role) values('${owner}','owner@example.com','SUPER_ADMIN'),('${staff}','staff@example.com','CHECK_IN_STAFF'),('${manager}','manager@example.com','EVENT_MANAGER');insert into staff_events values('${staff}','${eid}'),('${manager}','${eid}');update events set rsvp_deadline=now()+interval '1 day',checkin_closes_at=now()+interval '2 days',invitation_expires_at=now()+interval '2 days' where id='${eid}';`,

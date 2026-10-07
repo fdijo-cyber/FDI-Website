@@ -5,8 +5,14 @@ import { admin, api, invitationMessage, download, timestamp } from "./api";
 import { personSchema } from "../server/validation";
 import { Field, Status, Notice, QR as SecurityQR } from "./components";
 import type { Attendee, Event, Staff } from "./types";
+import { Authenticator } from "./security";
+import { exportPassQR } from "./qr-export";
+import { EventSchedule } from "./event-details";
+import { scheduleItemSchema } from "../server/validation";
+import { z } from "zod";
 import { defaultLayout } from "./certificate-layout";
 const blankPerson = {
+  public_id: "",
   full_name: "",
   role_code: "P",
   email: "",
@@ -50,7 +56,10 @@ export function PersonEditor({
         event_id: event.id,
         registration_id: attendee.id,
       })
-        .then(setA)
+        .then((d) => {
+          setA(d);
+          setP((old) => ({ ...old, ...d, full_name: d.name }));
+        })
         .catch((e) => setError(e.message));
   }, [attendee, event.id]);
   const change = (name: string, value: string) =>
@@ -65,6 +74,7 @@ export function PersonEditor({
         { event_id: event.id, ...(a ? { registration_id: a.id } : {}), ...p },
       );
       setA(data);
+      setP((old) => ({ ...old, ...data, full_name: data.name }));
       setMessage(
         a
           ? "Attendee updated."
@@ -176,7 +186,7 @@ export function PersonEditor({
           <div className="actions">
             <input
               aria-label="Find existing person"
-              placeholder="Search name, email or phone"
+              placeholder="Search name, FDI ID, email or phone"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -212,27 +222,43 @@ export function PersonEditor({
                   emergency_contact_name: m.emergency_contact_name,
                   emergency_contact_phone: m.emergency_contact_phone,
                   person_id: m.id,
+                  public_id: m.public_id ?? "",
                 });
                 setMatches([]);
               }}
             >
-              {m.full_name} · FDI-PERSON-{m.serial}
+              {m.full_name} · {m.public_id || `FDI-PERSON-${m.serial}`}
             </button>
           ))}
           {p.person_id && (
             <Notice>
-              Using an existing person. Choose the role for this event.
+              Using an existing person. Choose the role for this event. Their
+              identity and contact details are preserved; edit them from Manage
+              after creating this registration.
             </Notice>
           )}
         </section>
       )}
+      <p className="muted">
+        A custom ID belongs to this person and is reused across events. Leave it
+        blank for the automatic event ID. Previously assigned IDs stay reserved.
+        Changing identity details invalidates invitation sessions.
+      </p>
       <form onSubmit={save}>
         <div className="form-grid">
+          <Field
+            label="Permanent custom FDI ID (optional)"
+            name="public_id"
+            value={p.public_id ?? ""}
+            onChange={change}
+            disabled={!a && !!p.person_id}
+          />
           <Field
             label="Full name"
             name="full_name"
             value={p.full_name}
             onChange={change}
+            disabled={!a && !!p.person_id}
             required
           />
           <label className="field">
@@ -254,24 +280,28 @@ export function PersonEditor({
             type="email"
             value={p.email}
             onChange={change}
+            disabled={!a && !!p.person_id}
           />
           <Field
             label="Phone · admin only"
             name="phone"
             value={p.phone}
             onChange={change}
+            disabled={!a && !!p.person_id}
           />
           <Field
             label="Emergency contact · admin only"
             name="emergency_contact_name"
             value={p.emergency_contact_name}
             onChange={change}
+            disabled={!a && !!p.person_id}
           />
           <Field
             label="Emergency phone · admin only"
             name="emergency_contact_phone"
             value={p.emergency_contact_phone}
             onChange={change}
+            disabled={!a && !!p.person_id}
           />
         </div>
         {!a && !p.person_id && (
@@ -295,6 +325,39 @@ export function PersonEditor({
         <>
           <section className="editor-section">
             <h3>Personal invitation</h3>
+            {a.qr_token && (
+              <div className="badge-qr">
+                <SecurityQR value={location.origin + "/check/" + a.qr_token} />
+                <div>
+                  <p>
+                    Secure QR for your badge design. Pending or declined passes
+                    cannot check in.
+                  </p>
+                  <div className="actions">
+                    <button
+                      className="secondary"
+                      onClick={() =>
+                        exportPassQR(a.qr_token!, a.fdi_id, "svg").catch((e) =>
+                          setError(e.message),
+                        )
+                      }
+                    >
+                      Download QR · SVG
+                    </button>
+                    <button
+                      className="secondary"
+                      onClick={() =>
+                        exportPassQR(a.qr_token!, a.fdi_id, "png").catch((e) =>
+                          setError(e.message),
+                        )
+                      }
+                    >
+                      Download QR · PNG
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="actions">
               <button
                 className="secondary"
@@ -646,7 +709,10 @@ export function EventEditor({
     ),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [uploading, setUploading] = useState(false);
+    [uploading, setUploading] = useState(false),
+    [scheduleCode, setScheduleCode] = useState(
+      JSON.stringify(event?.schedule_items ?? [], null, 2),
+    );
   const change = (name: string, value: string) =>
     setE((s: any) => ({ ...s, [name]: value }));
   async function save(ev: React.FormEvent) {
@@ -654,8 +720,13 @@ export function EventEditor({
     setError("");
     setBusy(true);
     try {
+      const schedule_items = z
+        .array(scheduleItemSchema)
+        .max(100)
+        .parse(JSON.parse(scheduleCode));
       await admin("event_save", {
         ...e,
+        schedule_items,
         rsvp_deadline: toISO(e.rsvp_deadline, e.timezone),
         checkin_closes_at: toISO(e.checkin_closes_at, e.timezone),
         invitation_expires_at: e.invitation_expires_at
@@ -702,6 +773,68 @@ export function EventEditor({
         onChange={change}
         area
       />
+      <h3>Event artwork</h3>
+      <p className="muted">
+        Upload a cover photo for the invitation and an optional schedule image.
+        Save a new event before uploading.
+      </p>
+      {[
+        ["cover_image_url", "Event cover photo"],
+        ["schedule_image_url", "Schedule image"],
+      ].map(([key, label]) => (
+        <div key={key}>
+          <Field
+            name={key}
+            label={label + " URL"}
+            value={e[key] ?? ""}
+            onChange={change}
+          />
+          {e[key] && (
+            <img className="editor-preview" src={e[key]} alt={label} />
+          )}
+          {event && (
+            <label className="field">
+              Upload {label.toLowerCase()}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                disabled={uploading}
+                onChange={async (ev) => {
+                  const f = ev.target.files?.[0];
+                  if (!f) return;
+                  setUploading(true);
+                  setError("");
+                  try {
+                    if (f.size > 5242880)
+                      throw new Error("Use an image smaller than 5MB.");
+                    const { data } = await (await import("./api"))
+                      .auth()
+                      .then((c) => c.auth.getSession());
+                    const response = await fetch(
+                      "/api/media?event=" + event.id,
+                      {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": f.type,
+                          Authorization: "Bearer " + data.session?.access_token,
+                        },
+                        body: f,
+                      },
+                    );
+                    const d: any = await response.json();
+                    if (!response.ok) throw new Error(d.error);
+                    setE((old: any) => ({ ...old, [key]: d.url }));
+                  } catch (ex) {
+                    setError((ex as Error).message);
+                  } finally {
+                    setUploading(false);
+                  }
+                }}
+              />
+            </label>
+          )}
+        </div>
+      ))}
       <h3>Times & access</h3>
       <p className="muted">
         Times are interpreted in the event’s timezone. Check-in closes even if
@@ -764,6 +897,69 @@ export function EventEditor({
           onChange={change}
         />
       ))}
+      <h3>Interactive schedule</h3>
+      <p className="muted">
+        Paste JSON entries with time, title, details and track. Visitors can
+        filter tracks and expand session details. This supports structured
+        schedule code without executing arbitrary scripts.
+      </p>
+      <label className="field">
+        Schedule code (JSON)
+        <textarea
+          className="code-editor"
+          rows={8}
+          value={scheduleCode}
+          onChange={(ev) => setScheduleCode(ev.target.value)}
+          spellCheck={false}
+        />
+      </label>
+      <button
+        type="button"
+        className="secondary"
+        onClick={() => {
+          try {
+            const items = z
+              .array(scheduleItemSchema)
+              .max(100)
+              .parse(JSON.parse(scheduleCode));
+            setE({ ...e, schedule_items: items });
+            setError("");
+          } catch (ex) {
+            setError((ex as Error).message);
+          }
+        }}
+      >
+        Preview schedule
+      </button>
+      <button
+        type="button"
+        className="text-button"
+        onClick={() =>
+          setScheduleCode(
+            JSON.stringify(
+              [
+                {
+                  time: "09:00",
+                  title: "Welcome & registration",
+                  details: "Present your personal QR pass.",
+                  track: "Main program",
+                },
+              ],
+              null,
+              2,
+            ),
+          )
+        }
+      >
+        Insert example
+      </button>
+      <EventSchedule
+        event={{
+          schedule: e.schedule ?? "",
+          schedule_image_url: e.schedule_image_url ?? "",
+          schedule_items: e.schedule_items ?? [],
+        }}
+      />
       <h3>Certificates & event settings</h3>
       {[
         ["certificates_enabled", "Enable digital certificates"],
@@ -1001,8 +1197,9 @@ export function ImportDialog({
   return (
     <section>
       <p>
-        Columns: full_name, role, email, phone, emergency_contact_name,
-        emergency_contact_phone. Role accepts a label or code.
+        Columns: full_name, public_id, role, email, phone,
+        emergency_contact_name, emergency_contact_phone. Role accepts a label or
+        code.
       </p>
       <div className="actions">
         <button
@@ -1010,7 +1207,7 @@ export function ImportDialog({
           onClick={() =>
             download(
               "FDI-import-template.csv",
-              "full_name,role,email,phone,emergency_contact_name,emergency_contact_phone\n",
+              "full_name,public_id,role,email,phone,emergency_contact_name,emergency_contact_phone\n",
               "text/csv",
             )
           }
@@ -1110,7 +1307,15 @@ export function ImportDialog({
 }
 export function StaffManager({ events }: { events: Event[] }) {
   const [staff, setStaff] = useState<Staff[]>([]),
+    [passes, setPasses] = useState<Attendee[]>([]),
+    [attendeeRole, setAttendeeRole] = useState("T"),
+    [createPasses, setCreatePasses] = useState(true),
     [email, setEmail] = useState(""),
+    [fullName, setFullName] = useState(""),
+    [publicId, setPublicId] = useState(""),
+    [personId, setPersonId] = useState<string | undefined>(),
+    [personQuery, setPersonQuery] = useState(""),
+    [personMatches, setPersonMatches] = useState<any[]>([]),
     [role, setRole] = useState("CHECK_IN_STAFF"),
     [selected, setSelected] = useState<string[]>([]),
     [error, setError] = useState(""),
@@ -1137,14 +1342,98 @@ export function StaffManager({ events }: { events: Event[] }) {
       <h2>Authorized FDI accounts</h2>
       {error && <Notice error>{error}</Notice>}
       {message && <Notice>{message}</Notice>}
+      <p>
+        Access is invitation-only. Links never assign privileges; the saved role
+        and event assignments do. Staff must verify TOTP and accept staff terms.
+      </p>
+      {events[0] && (
+        <div className="reuse-person">
+          <h3>Link an existing FDI person</h3>
+          <input
+            aria-label="Find staff person"
+            placeholder="Name or permanent FDI ID"
+            value={personQuery}
+            onChange={(e) => setPersonQuery(e.target.value)}
+          />
+          <button
+            className="secondary"
+            onClick={async () => {
+              try {
+                setPersonMatches(
+                  await admin("people_search", {
+                    event_id: events[0].id,
+                    query: personQuery,
+                  }),
+                );
+              } catch (e) {
+                setError((e as Error).message);
+              }
+            }}
+          >
+            Find person
+          </button>
+          {personMatches.map((p) => (
+            <button
+              key={p.id}
+              className="match"
+              onClick={() => {
+                setPersonId(p.id);
+                setFullName(p.full_name);
+                setEmail(p.email);
+                setPublicId(p.public_id || `FDI-PERSON-${p.serial}`);
+                setPersonMatches([]);
+              }}
+            >
+              {p.full_name} · {p.public_id || `FDI-PERSON-${p.serial}`}
+            </button>
+          ))}
+          {personId && (
+            <p>
+              Existing person selected.{" "}
+              <button
+                className="text-button"
+                onClick={() => {
+                  setPersonId(undefined);
+                  setPublicId("");
+                }}
+              >
+                Use a new person instead
+              </button>
+            </p>
+          )}
+        </div>
+      )}
       <form
         onSubmit={async (e) => {
           e.preventDefault();
           setBusy(true);
           try {
-            await api("/staff/invite", { email, role, events: selected }, true);
-            setMessage("Staff invitation sent.");
+            const result = await api<{
+              message?: string;
+              event_invitations: Attendee[];
+            }>(
+              "/staff/invite",
+              {
+                email,
+                role,
+                events: selected,
+                full_name: fullName,
+                public_id: publicId,
+                person_id: personId,
+                attendee_role_code: attendeeRole,
+                create_event_passes: createPasses,
+              },
+              true,
+            );
+            setMessage(
+              result.message ||
+                "Staff sign-in invitation sent. Share the event invitation message below so the staff member can RSVP and activate their badge pass.",
+            );
+            setPasses(result.event_invitations ?? []);
             setEmail("");
+            setFullName("");
+            setPublicId("");
+            setPersonId(undefined);
             await load();
           } catch (ex) {
             setError((ex as Error).message);
@@ -1154,6 +1443,20 @@ export function StaffManager({ events }: { events: Event[] }) {
         }}
       >
         <div className="form-grid">
+          <Field
+            label="Staff full name"
+            name="full_name"
+            value={fullName}
+            onChange={(_, v) => setFullName(v)}
+            required
+          />
+          <Field
+            label="Reusable FDI staff ID"
+            name="public_id"
+            value={publicId}
+            onChange={(_, v) => setPublicId(v)}
+            required
+          />
           <Field
             label="Staff email"
             name="email"
@@ -1173,6 +1476,36 @@ export function StaffManager({ events }: { events: Event[] }) {
             </select>
           </label>
         </div>
+        <label className="check-label">
+          <input
+            type="checkbox"
+            checked={createPasses}
+            onChange={(e) => setCreatePasses(e.target.checked)}
+          />
+          Create personal QR event invitations for selected events
+        </label>
+        {createPasses && (
+          <label className="field">
+            Event attendee role (separate from access permission)
+            <select
+              value={attendeeRole}
+              onChange={(e) => setAttendeeRole(e.target.value)}
+            >
+              {[
+                ["T", "Team"],
+                ["V", "Volunteer"],
+                ["TR", "Trainer"],
+                ["S", "Supervisor"],
+                ["P", "Participant"],
+                ["G", "Guest"],
+              ].map(([code, label]) => (
+                <option key={code} value={code}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <p>Assigned events (required for event managers and check-in staff)</p>
         {events.map((e) => (
           <label className="check-label" key={e.id}>
@@ -1201,13 +1534,75 @@ export function StaffManager({ events }: { events: Event[] }) {
           Invite staff by email
         </button>
       </form>
+      {passes.length > 0 && (
+        <section className="editor-section">
+          <h3>Created event invitations</h3>
+          {passes.map((p) => (
+            <article key={p.id}>
+              <strong>
+                {events.find((e) => e.id === p.event_id)?.name} · {p.fdi_id}
+              </strong>
+              <SecurityQR value={location.origin + "/check/" + p.qr_token} />
+              <div className="actions">
+                <button
+                  className="secondary"
+                  onClick={() =>
+                    navigator.clipboard
+                      .writeText(
+                        invitationMessage(
+                          p,
+                          events.find((e) => e.id === p.event_id)!,
+                        ),
+                      )
+                      .then(() =>
+                        setMessage("Event invitation message copied."),
+                      )
+                      .catch((e) => setError(e.message))
+                  }
+                >
+                  Copy event invitation message
+                </button>
+                <button
+                  className="secondary"
+                  onClick={() =>
+                    exportPassQR(p.qr_token!, p.fdi_id, "svg").catch((e) =>
+                      setError(e.message),
+                    )
+                  }
+                >
+                  Download badge QR
+                </button>
+              </div>
+              <p>
+                Pass activates after RSVP acceptance. The staff sign-in email
+                and event invitation are separate.
+              </p>
+            </article>
+          ))}
+        </section>
+      )}
       <div className="staff-list">
         {staff.map((s) => (
           <article key={s.user_id}>
             <div>
-              <strong>{s.email}</strong>
+              <strong>{s.full_name || s.email}</strong>
+              <p>
+                {s.email} · {s.public_id || "ID not assigned"}
+              </p>
               <Status value={s.enabled ? "ACTIVE" : "REVOKED"} />
             </div>
+            <button
+              className="secondary"
+              onClick={() => {
+                const name = prompt("Staff name", s.full_name || "");
+                if (!name) return;
+                const id = prompt("Permanent FDI ID", s.public_id || "");
+                if (!id) return;
+                update({ ...s, full_name: name, public_id: id });
+              }}
+            >
+              Edit name & ID
+            </button>
             <label className="field">
               Role
               <select
@@ -1225,6 +1620,11 @@ export function StaffManager({ events }: { events: Event[] }) {
               </select>
             </label>
             <p className="muted">
+              Staff terms:{" "}
+              {s.terms_accepted_at
+                ? timestamp(s.terms_accepted_at)
+                : "Not accepted"}
+              <br />
               Last sign-in:{" "}
               {s.last_login ? timestamp(s.last_login) : "Not available"}
             </p>
@@ -1326,105 +1726,5 @@ export function RoleSettings({
   );
 }
 export function AccountSecurity() {
-  const [factor, setFactor] = useState<any>(null),
-    [enrolled, setEnrolled] = useState<any[]>([]),
-    [code, setCode] = useState(""),
-    [error, setError] = useState(""),
-    [message, setMessage] = useState("");
-  async function load() {
-    const { auth } = await import("./api");
-    const { data, error } = await (await auth()).auth.mfa.listFactors();
-    if (error) setError(error.message);
-    else setEnrolled(data.totp);
-  }
-  useEffect(() => {
-    load();
-  }, []);
-  return (
-    <section className="panel">
-      <h2>Authenticator protection</h2>
-      <p>
-        Protect this account with an authenticator app. Once enabled, the server
-        requires a verified second factor for staff operations.
-      </p>
-      {error && <Notice error>{error}</Notice>}
-      {message && <Notice>{message}</Notice>}
-      {enrolled.map((f) => (
-        <div key={f.id} className="actions">
-          <Status value="ACTIVE" />
-          <strong>{f.friendly_name ?? "Authenticator"}</strong>
-          <button
-            className="danger secondary"
-            onClick={async () => {
-              if (!confirm("Remove this authenticator from your account?"))
-                return;
-              const { auth } = await import("./api");
-              const { error } = await (
-                await auth()
-              ).auth.mfa.unenroll({ factorId: f.id });
-              if (error) setError(error.message);
-              else {
-                setMessage("Authenticator removed.");
-                load();
-              }
-            }}
-          >
-            Remove authenticator
-          </button>
-        </div>
-      ))}
-      {!enrolled.length && !factor && (
-        <button
-          onClick={async () => {
-            try {
-              const { auth } = await import("./api");
-              const { data, error } = await (
-                await auth()
-              ).auth.mfa.enroll({
-                factorType: "totp",
-                friendlyName: "FDI authenticator",
-              });
-              if (error) throw error;
-              setFactor(data);
-            } catch (e) {
-              setError((e as Error).message);
-            }
-          }}
-        >
-          Enable authenticator
-        </button>
-      )}
-      {factor && (
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            const { auth } = await import("./api");
-            const { error } = await (
-              await auth()
-            ).auth.mfa.challengeAndVerify({ factorId: factor.id, code });
-            if (error) setError(error.message);
-            else {
-              setFactor(null);
-              setMessage("Authenticator enabled.");
-              load();
-            }
-          }}
-        >
-          <p>
-            Scan this QR in your authenticator app, then enter its six-digit
-            code.
-          </p>
-          <SecurityQR value={factor.totp.uri} />
-          <Field
-            name="code"
-            label="Authenticator code"
-            value={code}
-            onChange={(_, v) => setCode(v)}
-            required
-          />
-          <button>Verify & enable</button>
-        </form>
-      )}
-    </section>
-  );
+  return <Authenticator onVerified={() => location.reload()} />;
 }

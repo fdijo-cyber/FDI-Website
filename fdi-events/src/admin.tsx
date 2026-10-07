@@ -29,6 +29,8 @@ import {
   RoleSettings,
   AccountSecurity,
 } from "./editors";
+import { SecurityGate } from "./security";
+import { Footer } from "./components";
 import { Scanner } from "./scanner";
 export function AdminApp() {
   const [boot, setBoot] = useState<Bootstrap | null>(null),
@@ -38,8 +40,7 @@ export function AdminApp() {
     [password, setPassword] = useState(""),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
-    [mfa, setMfa] = useState(""),
-    [mfaFactor, setMfaFactor] = useState("");
+    [security, setSecurity] = useState<any>(null);
   const [tab, setTab] = useState(
       location.pathname.startsWith("/scan") ? "scan" : "attendees",
     ),
@@ -60,18 +61,14 @@ export function AdminApp() {
     setError("");
     try {
       const client = await auth();
-      const level = await client.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (
-        level.data?.nextLevel === "aal2" &&
-        level.data.currentLevel !== "aal2"
-      ) {
-        const factors = await client.auth.mfa.listFactors();
-        if (factors.data?.totp[0]) {
-          setMfaFactor(factors.data.totp[0].id);
-          setLoading(false);
-          return;
-        }
+      const gate = await api<any>("/security", undefined, true);
+      if (gate.needs_mfa || gate.needs_terms) {
+        setSecurity(gate);
+        setBoot(null);
+        setPeople([]);
+        return;
       }
+      setSecurity(null);
       const b = await admin<Bootstrap>("bootstrap");
       setBoot(b);
       setSelected((s) =>
@@ -95,9 +92,15 @@ export function AdminApp() {
         const sub = c.auth.onAuthStateChange((event) => {
           if (event === "SIGNED_OUT") {
             setBoot(null);
+            setSecurity(null);
             setPeople([]);
           }
-          if (event === "SIGNED_IN") setTimeout(load, 0);
+          if (
+            ["SIGNED_IN", "MFA_CHALLENGE_VERIFIED", "TOKEN_REFRESHED"].includes(
+              event,
+            )
+          )
+            setTimeout(load, 0);
         });
         unsubscribe = () => sub.data.subscription.unsubscribe();
       })
@@ -126,6 +129,30 @@ export function AdminApp() {
         .catch((e) => setError(e.message));
   }, [tab, selected]);
   const event = boot?.events.find((e) => e.id === selected);
+  async function exportBadges() {
+    setBusy(true);
+    try {
+      const rows = await admin<any[]>("badge_export", { event_id: selected });
+      download(
+        (event?.code ?? "FDI") + "-badge-import.csv",
+        Papa.unparse(
+          rows.map((r) => ({
+            "FDI ID": csvSafe(r.fdi_id),
+            Name: csvSafe(r.name),
+            Role: csvSafe(r.role),
+            Event: csvSafe(event?.name),
+            QR_URL: location.origin + "/check/" + r.qr_token,
+          })),
+        ),
+        "text/csv",
+      );
+      setMessage("Badge CSV downloaded. Keep these private QR links secure.");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
   async function login(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -136,11 +163,7 @@ export function AdminApp() {
       if (password) {
         const { error } = await c.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        const factors = await c.auth.mfa.listFactors();
-        if (factors.data?.totp.length) {
-          setMfaFactor(factors.data.totp[0].id);
-          setMessage("Enter your authenticator code.");
-        } else await load();
+        await load();
       } else {
         const { error } = await c.auth.signInWithOtp({
           email,
@@ -160,22 +183,6 @@ export function AdminApp() {
       setBusy(false);
     }
   }
-  async function verifyMfa(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      const { error } = await (
-        await auth()
-      ).auth.mfa.challengeAndVerify({ factorId: mfaFactor, code: mfa });
-      if (error) throw error;
-      setMfaFactor("");
-      await load();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
   if (loading)
     return (
       <main className="public-shell">
@@ -183,7 +190,8 @@ export function AdminApp() {
         <p>Loading your FDI workspace…</p>
       </main>
     );
-  if (!boot || mfaFactor)
+  if (security) return <SecurityGate state={security} onComplete={load} />;
+  if (!boot)
     return (
       <main className="public-shell login">
         <Brand />
@@ -192,52 +200,38 @@ export function AdminApp() {
         <p>Use the account invited by an FDI administrator.</p>
         {error && <Notice error>{error}</Notice>}
         {message && <Notice>{message}</Notice>}
-        <form onSubmit={mfaFactor ? verifyMfa : login}>
-          {mfaFactor ? (
+        <form onSubmit={login}>
+          <>
             <label className="field">
-              Authenticator code
+              Email
               <input
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                value={mfa}
-                onChange={(e) => setMfa(e.target.value)}
+                type="email"
+                autoComplete="username"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </label>
-          ) : (
-            <>
-              <label className="field">
-                Email
-                <input
-                  type="email"
-                  autoComplete="username"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </label>
-              <label className="field">
-                Password{" "}
-                <span className="muted">(leave blank for a magic link)</span>
-                <input
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </label>
-            </>
-          )}
+            <label className="field">
+              Password{" "}
+              <span className="muted">(leave blank for a magic link)</span>
+              <input
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </label>
+          </>
           <button disabled={busy}>
             {busy
               ? "Please wait…"
-              : mfaFactor
-                ? "Verify code"
-                : password
-                  ? "Sign in"
-                  : "Email sign-in link"}
+              : password
+                ? "Sign in"
+                : "Email sign-in link"}
           </button>
         </form>
+        <Footer />
       </main>
     );
   const staffOnly = boot.staff.role === "CHECK_IN_STAFF";
@@ -597,6 +591,14 @@ export function AdminApp() {
                   >
                     <Download size={16} />
                     Export CSV
+                  </button>
+                  <button
+                    className="secondary"
+                    disabled={busy}
+                    onClick={exportBadges}
+                  >
+                    <Download size={16} />
+                    Badge import CSV
                   </button>
                   <button
                     className="secondary"

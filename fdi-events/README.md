@@ -1,3 +1,5 @@
+See [UPGRADE.md](UPGRADE.md) for the October 7 updates and the safe upgrade sequence for an existing deployment.
+
 # FDI Event Platform
 
 Functional React/TypeScript application, Cloudflare Worker API, and Supabase PostgreSQL/Auth. Built separately from the existing FDI website; no existing site files or DNS are changed.
@@ -18,7 +20,7 @@ This source is deployment-prepared and locally tested. **It is not a live produc
 - Database sequences allocate IDs safely under concurrency. A person has `FDI-PERSON-137`; each event registration has `#FDI-JPS-P-137` using a separate global registration sequence. Registration serials never reset. Gaps after rolled-back imports are normal. Changing an event code affects future IDs; issued IDs remain stable unless role/event is explicitly changed.
 - 256-bit invitation/QR/verification tokens; SHA-256 lookups. Invitation cookies are HttpOnly, Secure in production, SameSite=Strict, expire in two hours, and are scoped to invitation API routes. Name matching ignores case/repeated whitespace; ID matching ignores case. Mismatches return one generic error.
 - Rate limits are atomic PostgreSQL counters, not unreliable process memory. Raw IP addresses are not stored. `RATE_LIMIT_SECRET` salts rate-limit identifiers. Limits: unlock 30/IP and 20/token per 15 minutes; staff API 300/minute; public certificate verification 60/minute.
-- API mutations require the configured same origin. Authenticated operations require a bearer token; MFA-enabled accounts require `aal2`. All output is escaped by React, URLs are validated, and CSP/referrer/cache headers protect private pages.
+- API mutations require the configured same origin. Authenticated operations require a bearer token; all staff require a verified TOTP factor, an `aal2` session, and acceptance of the current staff terms. All output is escaped by React, URLs are validated, and CSP/referrer/cache headers protect private pages.
 - Check-in locks the registration and revalidates invitation state before writing. One `check_ins` row per registration. Scanning has no write side effect. Undo is audited and revokes any issued certificate.
 - Scanner staff never receive personal email, phone, or emergency contact fields. Admin list responses omit emergency contacts; elevated exports fetch them separately and are audited. Soft-removal preserves history and revokes invitation/certificate access.
 
@@ -44,7 +46,7 @@ Use a dedicated free Supabase project for FDI events. Do not apply these migrati
 
 1. Install the Supabase CLI, authenticate, and link the project:
    `supabase login`, then `supabase link --project-ref YOUR_PROJECT_REF`.
-2. Run `supabase db push` to apply `001_platform.sql` and `002_template_storage.sql`.
+2. Run `supabase db push` to apply all four migrations (`001` through `004`).
 3. Apply `supabase/seed.sql` once in the SQL editor (or `supabase db reset` for local-only development). Production `db push` does not automatically apply seed data.
 4. In Auth settings disable public sign-up. Set Site URL and redirect allowlist to the final origin and `/auth/callback`.
 5. Create the owner through Supabase Auth's administrative user creation flow. In the SQL editor run:
@@ -57,7 +59,7 @@ where email='YOUR_OWNER_EMAIL';
 
 6. Sign in as the owner and invite staff from **Staff access**. Staff must be assigned appropriate events.
 7. Configure an SMTP provider before using magic links/invitations for external staff. Supabase's built-in test mailer is not a general production mail service. A provider's free tier can be used; no SMTP credentials belong in this application or GitHub.
-8. Enable MFA through **Account security**. The Worker rejects MFA-enabled staff sessions that have not completed the second factor.
+8. Complete mandatory TOTP enrollment/verification and accept staff terms at first sign-in. The Worker blocks data access until both are complete.
 
 `certificate-templates` is a public Storage bucket for approved **blank** templates only. No client upload policies are created. Scoped Worker uploads use the server key. Personalized certificates are generated on demand in the browser and not stored publicly.
 
@@ -105,7 +107,7 @@ Copy link/message, open email (`mailto:`), or prepare WhatsApp (`wa.me`). No pai
 ## Testing and QA
 
 ```sh
-npm test                        # 16 database/API/security/QR/PDF test groups
+npm test                        # database/API/security/QR/PDF and upgrade tests
 npm run build                   # strict TypeScript and production build
 npx wrangler deploy --dry-run    # verify Worker packaging without deploying
 npx playwright install chromium

@@ -8,7 +8,7 @@ import type { Attendee, Event, Staff } from "./types";
 import { Authenticator } from "./security";
 import { exportPassQR } from "./qr-export";
 import {
-  gmailInvitationUrl,
+  openGmailInvitation,
   copyFormattedInvitation,
 } from "./invitation-email";
 import { EventSchedule } from "./event-details";
@@ -135,12 +135,7 @@ export function PersonEditor({
       if (kind === "link") await navigator.clipboard.writeText(url);
       if (kind === "message") await navigator.clipboard.writeText(msg);
       if (kind === "formatted") await copyFormattedInvitation(a, event);
-      if (kind === "email")
-        window.open(
-          gmailInvitationUrl(a, event),
-          "_blank",
-          "noopener,noreferrer",
-        );
+      if (kind === "email") openGmailInvitation(a, event);
       if (kind === "whatsapp")
         window.open(
           "https://wa.me/" +

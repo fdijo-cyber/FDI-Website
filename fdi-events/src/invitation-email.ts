@@ -56,8 +56,19 @@ export function gmailInvitationUrl(
   a: Recipient,
   e: Event,
   origin = location.origin,
+  useApp = isAppleMobile(),
 ) {
   const message = invitationEmail(a, e, origin);
+  if (useApp) {
+    const query = Object.entries({
+      to: a.email,
+      subject: message.subject,
+      body: message.text,
+    })
+      .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+      .join("&");
+    return `googlegmail:///co?${query}`;
+  }
   const query = new URLSearchParams({
     view: "cm",
     fs: "1",
@@ -67,6 +78,20 @@ export function gmailInvitationUrl(
     body: message.text,
   });
   return `https://mail.google.com/mail/?${query}`;
+}
+
+function isAppleMobile() {
+  if (typeof navigator === "undefined") return false;
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
+export function openGmailInvitation(a: Recipient, e: Event) {
+  const url = gmailInvitationUrl(a, e);
+  if (url.startsWith("googlegmail:")) location.assign(url);
+  else window.open(url, "_blank", "noopener,noreferrer");
 }
 
 export async function copyFormattedInvitation(a: Recipient, e: Event) {

@@ -390,6 +390,58 @@ export async function handle(request: Request, env: Env): Promise<Response> {
         }),
       );
     }
+    if (u.pathname === "/api/staff/resend" && request.method === "POST") {
+      if (bootstrap.staff.role !== "SUPER_ADMIN") throw new Error("FORBIDDEN");
+      const b = z.object({ user_id: z.uuid() }).parse(await body());
+      const staff = await rpc("fdi_admin", {
+        actor,
+        action: "staff_list",
+        payload: {},
+      });
+      const target = staff.find(
+        (s: any) => s.user_id === b.user_id && s.enabled,
+      );
+      if (!target)
+        return json(
+          {
+            error:
+              "Choose an active staff account. Removed accounts cannot receive setup emails.",
+          },
+          400,
+        );
+      await rate("staff-resend:" + actor, 20, 3600);
+      await rate("staff-resend-target:" + b.user_id, 1, 60);
+      const audit = await db.from("audit_logs").insert({
+        actor,
+        target_id: b.user_id,
+        action: "STAFF_ACCOUNT_EMAIL_REQUESTED",
+        metadata: { method: "password_recovery" },
+      });
+      if (audit.error) throw new Error("AUDIT_FAILED");
+      const result = await db.auth.resetPasswordForEmail(target.email, {
+        redirectTo: env.APP_ORIGIN + "/auth/callback",
+      });
+      if (result.error) {
+        const code = result.error.code || "";
+        const message =
+          code === "email_address_not_authorized"
+            ? "Supabase cannot email this address with its default mailer. Enable and configure custom SMTP in Supabase Authentication → Emails."
+            : code.includes("rate_limit") || result.error.status === 429
+              ? "The email provider’s sending limit was reached. Wait before retrying and check Supabase email rate limits."
+              : "Supabase could not send the account setup email. Check custom SMTP settings and Supabase Auth logs. Existing staff access has not changed.";
+        return json(
+          { error: message },
+          result.error.status === 429 ? 429 : 502,
+        );
+      }
+      return json({
+        ok: true,
+        message:
+          "Supabase accepted the account setup email request for " +
+          target.email +
+          ". Ask them to check their inbox and spam folder. Their existing access is unchanged.",
+      });
+    }
     if (u.pathname === "/api/staff/invite" && request.method === "POST") {
       if (bootstrap.staff.role !== "SUPER_ADMIN") throw new Error("FORBIDDEN");
       await rate("staff-invite:" + actor, 10, 3600);

@@ -7,6 +7,7 @@ import {
   testEvent,
   ownerToken,
   ownerAal1Token,
+  staffToken,
 } from "./support/harness";
 import { handle, hash, randomToken } from "../server/worker";
 import { validateAdmin } from "../server/validation";
@@ -42,6 +43,71 @@ before(async () => {
 after(async () => {
   h.restore();
   await h.db.close();
+});
+test("Staff email resend is authorized, rate limited, audited, and preserves existing records", async () => {
+  const env = {
+    SUPABASE_URL: "https://fdi-test.supabase.co",
+    SUPABASE_ANON_KEY: "test",
+    SUPABASE_SERVICE_ROLE_KEY: "test",
+    RATE_LIMIT_SECRET: "test",
+    APP_ORIGIN: "https://fdi.test",
+    ASSETS: {} as any,
+  };
+  const send = (user_id: string, token = ownerToken) =>
+    handle(
+      new Request("https://fdi.test/api/staff/resend", {
+        method: "POST",
+        headers: {
+          Origin: "https://fdi.test",
+          Authorization: "Bearer " + token,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ user_id }),
+      }),
+      env,
+    );
+  const before = await h.db.query(
+    "select user_id,email,role,enabled from staff order by user_id",
+  );
+  const invitations = await h.db.query("select * from invitations order by id");
+  assert.equal((await send(testOwner, staffToken)).status, 403);
+  assert.equal(
+    (await send("33333333-3333-4333-8333-333333333333")).status,
+    400,
+  );
+  assert.equal(h.recoveryRequests.length, 0);
+  assert.equal((await send(testStaff)).status, 200);
+  assert.equal(h.recoveryRequests[0].body.email, "scanner@example.com");
+  assert.equal(
+    h.recoveryRequests[0].redirect,
+    "https://fdi.test/auth/callback",
+  );
+  assert.equal((await send(testStaff)).status, 429);
+  h.authState.emailError = "email_address_not_authorized";
+  const failed = await send(testOwner);
+  assert.equal(failed.status, 502);
+  assert.match(((await failed.json()) as any).error, /custom SMTP/);
+  h.authState.emailError = "";
+  assert.deepEqual(
+    (
+      await h.db.query(
+        "select user_id,email,role,enabled from staff order by user_id",
+      )
+    ).rows,
+    before.rows,
+  );
+  assert.deepEqual(
+    (await h.db.query("select * from invitations order by id")).rows,
+    invitations.rows,
+  );
+  assert.equal(
+    (
+      await h.db.query(
+        "select * from audit_logs where action='STAFF_ACCOUNT_EMAIL_REQUESTED'",
+      )
+    ).rows.length,
+    2,
+  );
 });
 test("Custom IDs edit, authenticate, survive role changes, and reuse across future events", async () => {
   const base = {

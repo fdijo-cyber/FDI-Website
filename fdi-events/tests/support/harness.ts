@@ -39,7 +39,9 @@ export async function harness() {
     verified: true,
     needsPassword: false,
     passwordUpdates: 0,
+    emailError: "",
   };
+  const recoveryRequests: any[] = [];
   const uploads: { path: string; type: string | null; size: number }[] = [];
   const db = new PGlite();
   await db.exec(
@@ -142,6 +144,30 @@ export async function harness() {
         email: "owner@example.com",
         app_metadata: change.app_metadata,
       };
+    } else if (u.pathname === "/auth/v1/recover") {
+      if (authState.emailError)
+        return new Response(
+          JSON.stringify({
+            code: authState.emailError,
+            msg: "Test provider rejection",
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        );
+      recoveryRequests.push({
+        body: await request.json(),
+        redirect: u.searchParams.get("redirect_to"),
+      });
+      data = {};
+    } else if (
+      u.pathname === "/rest/v1/audit_logs" &&
+      request.method === "POST"
+    ) {
+      const row = (await request.json()) as any;
+      await db.query(
+        "insert into audit_logs(actor,target_id,action,metadata) values($1,$2,$3,$4::jsonb)",
+        [row.actor, row.target_id, row.action, JSON.stringify(row.metadata)],
+      );
+      data = {};
     } else if (u.pathname.startsWith("/rest/v1/rpc/")) {
       const fn = u.pathname.split("/").pop()!;
       const args = (await request.json()) as any;
@@ -179,6 +205,7 @@ export async function harness() {
     });
   };
   return {
+    recoveryRequests,
     db,
     authState,
     uploads,

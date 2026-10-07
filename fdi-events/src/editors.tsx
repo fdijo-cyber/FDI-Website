@@ -1716,6 +1716,29 @@ export function StaffManager({ events }: { events: Event[] }) {
               <div className="actions">
                 <button
                   className="secondary"
+                  disabled={busy || !s.enabled}
+                  onClick={async () => {
+                    setBusy(true);
+                    setError("");
+                    setMessage("");
+                    try {
+                      const result = await api<{ message: string }>(
+                        "/staff/resend",
+                        { user_id: s.user_id },
+                        true,
+                      );
+                      setMessage(result.message);
+                    } catch (ex) {
+                      setError((ex as Error).message);
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  <Mail size={16} /> Resend account setup email
+                </button>
+                <button
+                  className="secondary"
                   onClick={() => update({ ...s, enabled: !s.enabled })}
                 >
                   {s.enabled ? "Disable access" : "Enable access"}

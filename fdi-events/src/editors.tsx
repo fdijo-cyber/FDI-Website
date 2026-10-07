@@ -1357,6 +1357,7 @@ export function ImportDialog({
   );
 }
 export function StaffManager({ events }: { events: Event[] }) {
+  const [showInactive, setShowInactive] = useState(false);
   const [staff, setStaff] = useState<Staff[]>([]),
     [passes, setPasses] = useState<Attendee[]>([]),
     [attendeeRole, setAttendeeRole] = useState("T"),
@@ -1632,98 +1633,111 @@ export function StaffManager({ events }: { events: Event[] }) {
           ))}
         </section>
       )}
+      <label className="check-label">
+        <input
+          type="checkbox"
+          checked={showInactive}
+          onChange={(e) => setShowInactive(e.target.checked)}
+        />
+        Show removed or disabled staff
+      </label>
+      {!staff.some((s) => showInactive || s.enabled) && (
+        <p className="muted">No active staff accounts to display.</p>
+      )}
       <div className="staff-list">
-        {staff.map((s) => (
-          <article key={s.user_id}>
-            <div>
-              <strong>{s.full_name || s.email}</strong>
-              <p>
-                {s.email} · {s.public_id || "ID not assigned"}
-              </p>
-              <Status value={s.enabled ? "ACTIVE" : "REVOKED"} />
-            </div>
-            <button
-              className="secondary"
-              onClick={() => {
-                const name = prompt("Staff name", s.full_name || "");
-                if (!name) return;
-                const id = prompt("Permanent FDI ID", s.public_id || "");
-                if (!id) return;
-                update({ ...s, full_name: name, public_id: id });
-              }}
-            >
-              Edit name & ID
-            </button>
-            <label className="field">
-              Role
-              <select
-                value={s.role}
-                onChange={(e) => update({ ...s, role: e.target.value })}
-              >
-                {[
-                  "CHECK_IN_STAFF",
-                  "EVENT_MANAGER",
-                  "ADMIN",
-                  "SUPER_ADMIN",
-                ].map((r) => (
-                  <option key={r}>{r}</option>
-                ))}
-              </select>
-            </label>
-            <p className="muted">
-              Staff terms:{" "}
-              {s.terms_accepted_at
-                ? timestamp(s.terms_accepted_at)
-                : "Not accepted"}
-              <br />
-              Last sign-in:{" "}
-              {s.last_login ? timestamp(s.last_login) : "Not available"}
-            </p>
-            <fieldset>
-              <legend>Event access</legend>
-              {events.map((e) => (
-                <label className="check-label" key={e.id}>
-                  <input
-                    type="checkbox"
-                    checked={s.events?.includes(e.id) ?? false}
-                    onChange={(v) =>
-                      update({
-                        ...s,
-                        events: v.target.checked
-                          ? [...(s.events ?? []), e.id]
-                          : (s.events ?? []).filter((id) => id !== e.id),
-                      })
-                    }
-                  />
-                  {e.name}
-                </label>
-              ))}
-            </fieldset>
-            <div className="actions">
+        {staff
+          .filter((s) => showInactive || s.enabled)
+          .map((s) => (
+            <article key={s.user_id}>
+              <div>
+                <strong>{s.full_name || s.email}</strong>
+                <p>
+                  {s.email} · {s.public_id || "ID not assigned"}
+                </p>
+                <Status value={s.enabled ? "ACTIVE" : "REVOKED"} />
+              </div>
               <button
                 className="secondary"
-                onClick={() => update({ ...s, enabled: !s.enabled })}
-              >
-                {s.enabled ? "Disable access" : "Enable access"}
-              </button>
-              <button
-                className="danger text-button"
-                onClick={async () => {
-                  if (confirm("Remove FDI access for " + s.email + "?")) {
-                    try {
-                      await admin("staff_remove", { user_id: s.user_id });
-                      await load();
-                    } catch (e) {
-                      setError((e as Error).message);
-                    }
-                  }
+                onClick={() => {
+                  const name = prompt("Staff name", s.full_name || "");
+                  if (!name) return;
+                  const id = prompt("Permanent FDI ID", s.public_id || "");
+                  if (!id) return;
+                  update({ ...s, full_name: name, public_id: id });
                 }}
               >
-                Remove access
+                Edit name & ID
               </button>
-            </div>
-          </article>
-        ))}
+              <label className="field">
+                Role
+                <select
+                  value={s.role}
+                  onChange={(e) => update({ ...s, role: e.target.value })}
+                >
+                  {[
+                    "CHECK_IN_STAFF",
+                    "EVENT_MANAGER",
+                    "ADMIN",
+                    "SUPER_ADMIN",
+                  ].map((r) => (
+                    <option key={r}>{r}</option>
+                  ))}
+                </select>
+              </label>
+              <p className="muted">
+                Staff terms:{" "}
+                {s.terms_accepted_at
+                  ? timestamp(s.terms_accepted_at)
+                  : "Not accepted"}
+                <br />
+                Last sign-in:{" "}
+                {s.last_login ? timestamp(s.last_login) : "Not available"}
+              </p>
+              <fieldset>
+                <legend>Event access</legend>
+                {events.map((e) => (
+                  <label className="check-label" key={e.id}>
+                    <input
+                      type="checkbox"
+                      checked={s.events?.includes(e.id) ?? false}
+                      onChange={(v) =>
+                        update({
+                          ...s,
+                          events: v.target.checked
+                            ? [...(s.events ?? []), e.id]
+                            : (s.events ?? []).filter((id) => id !== e.id),
+                        })
+                      }
+                    />
+                    {e.name}
+                  </label>
+                ))}
+              </fieldset>
+              <div className="actions">
+                <button
+                  className="secondary"
+                  onClick={() => update({ ...s, enabled: !s.enabled })}
+                >
+                  {s.enabled ? "Disable access" : "Enable access"}
+                </button>
+                <button
+                  className="danger text-button"
+                  onClick={async () => {
+                    if (confirm("Remove FDI access for " + s.email + "?")) {
+                      try {
+                        await admin("staff_remove", { user_id: s.user_id });
+                        await load();
+                      } catch (e) {
+                        setError((e as Error).message);
+                      }
+                    }
+                  }}
+                >
+                  Remove access
+                </button>
+              </div>
+            </article>
+          ))}
       </div>
     </section>
   );

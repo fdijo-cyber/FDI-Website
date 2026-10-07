@@ -243,7 +243,10 @@ export async function handle(request: Request, env: Env): Promise<Response> {
       action: "status",
       version: null,
     });
-    const needsMfa = !verifiedFactor || claims.aal !== "aal2";
+    // Enrollment is optional; an enrolled authenticator still protects sign-in.
+    const needsMfa = verifiedFactor && claims.aal !== "aal2";
+    const needsPassword =
+      user.user.app_metadata?.fdi_password_setup_required === true;
     const needsTerms =
       security.terms_version !== security.required_terms_version;
     if (u.pathname === "/api/security" && request.method === "GET")
@@ -251,14 +254,38 @@ export async function handle(request: Request, env: Env): Promise<Response> {
         ...security,
         needs_mfa: needsMfa,
         needs_enrollment: !verifiedFactor,
+        needs_password: needsPassword,
         needs_terms: needsTerms,
       });
     if (needsMfa)
       return json(
         {
           error:
-            "Set up and verify your authenticator to access the staff workspace.",
+            "Verify your enabled authenticator to access the staff workspace.",
           code: "MFA_REQUIRED",
+        },
+        403,
+      );
+    if (u.pathname === "/api/security/password" && request.method === "POST") {
+      const b = z
+        .object({ password: z.string().min(12).max(128) })
+        .parse(await body());
+      const result = await db.auth.admin.updateUserById(actor, {
+        password: b.password,
+        app_metadata: {
+          ...user.user.app_metadata,
+          fdi_password_setup_required: false,
+        },
+      });
+      if (result.error)
+        throw new Error("Password could not be saved. Please try again.");
+      return json({ saved: true });
+    }
+    if (needsPassword)
+      return json(
+        {
+          error: "Create your password to continue to the FDI dashboard.",
+          code: "PASSWORD_SETUP_REQUIRED",
         },
         403,
       );
@@ -412,6 +439,13 @@ export async function handle(request: Request, env: Env): Promise<Response> {
         if (invited.error || !invited.data.user)
           throw new Error("STAFF_INVITE_FAILED");
         userId = invited.data.user.id;
+        const setup = await db.auth.admin.updateUserById(userId, {
+          app_metadata: {
+            ...invited.data.user.app_metadata,
+            fdi_password_setup_required: true,
+          },
+        });
+        if (setup.error) throw new Error("STAFF_INVITE_FAILED");
       }
       const event_passes = b.create_event_passes
         ? await Promise.all(

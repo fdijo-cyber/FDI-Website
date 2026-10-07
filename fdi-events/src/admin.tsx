@@ -29,10 +29,11 @@ import {
   RoleSettings,
   AccountSecurity,
 } from "./editors";
-import { SecurityGate } from "./security";
+import { SecurityGate, PasswordSetup } from "./security";
 import { Footer } from "./components";
 import { Scanner } from "./scanner";
 export function AdminApp() {
+  const [passwordSetup, setPasswordSetup] = useState(false);
   const [boot, setBoot] = useState<Bootstrap | null>(null),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
@@ -62,19 +63,41 @@ export function AdminApp() {
     try {
       const client = await auth();
       const gate = await api<any>("/security", undefined, true);
-      if (gate.needs_mfa || gate.needs_terms) {
+      if (gate.needs_mfa) {
         setSecurity(gate);
         setBoot(null);
         setPeople([]);
         return;
       }
       setSecurity(null);
+      if (
+        gate.needs_password ||
+        sessionStorage.getItem("fdi-password-setup") === "true"
+      ) {
+        setPasswordSetup(true);
+        setBoot(null);
+        setPeople([]);
+        return;
+      }
+      setPasswordSetup(false);
+      if (gate.needs_terms) {
+        setSecurity(gate);
+        setBoot(null);
+        setPeople([]);
+        return;
+      }
       const b = await admin<Bootstrap>("bootstrap");
       setBoot(b);
       setSelected((s) =>
         b.events.some((e) => e.id === s) ? s : (b.events[0]?.id ?? ""),
       );
       if (b.staff.role === "CHECK_IN_STAFF") setTab("scan");
+      if (location.pathname.startsWith("/auth/"))
+        history.replaceState(
+          null,
+          "",
+          b.staff.role === "CHECK_IN_STAFF" ? "/scan" : "/admin",
+        );
     } catch (e) {
       setError((e as Error).message);
       setBoot(null);
@@ -84,6 +107,9 @@ export function AdminApp() {
   }, []);
   useEffect(() => {
     let unsubscribe = () => {};
+    const type = new URLSearchParams(location.hash.slice(1)).get("type");
+    if (type === "invite" || type === "recovery")
+      sessionStorage.setItem("fdi-password-setup", "true");
     auth()
       .then(async (c) => {
         const { data } = await c.auth.getSession();
@@ -94,6 +120,8 @@ export function AdminApp() {
             setBoot(null);
             setSecurity(null);
             setPeople([]);
+            setPasswordSetup(false);
+            sessionStorage.removeItem("fdi-password-setup");
           }
           if (
             ["SIGNED_IN", "MFA_CHALLENGE_VERIFIED", "TOKEN_REFRESHED"].includes(
@@ -101,6 +129,11 @@ export function AdminApp() {
             )
           )
             setTimeout(load, 0);
+          if (event === "PASSWORD_RECOVERY") {
+            sessionStorage.setItem("fdi-password-setup", "true");
+            setPasswordSetup(true);
+            setTimeout(load, 0);
+          }
         });
         unsubscribe = () => sub.data.subscription.unsubscribe();
       })
@@ -191,6 +224,7 @@ export function AdminApp() {
       </main>
     );
   if (security) return <SecurityGate state={security} onComplete={load} />;
+  if (passwordSetup) return <PasswordSetup onComplete={load} />;
   if (!boot)
     return (
       <main className="public-shell login">
@@ -231,6 +265,31 @@ export function AdminApp() {
                 : "Email sign-in link"}
           </button>
         </form>
+        <button
+          className="text-button"
+          disabled={busy || !email}
+          onClick={async () => {
+            setBusy(true);
+            setError("");
+            try {
+              const result = await (
+                await auth()
+              ).auth.resetPasswordForEmail(email, {
+                redirectTo: location.origin + "/auth/callback",
+              });
+              if (result.error) throw result.error;
+              setMessage(
+                "If this is your account, a password setup link will arrive by email. Existing access and invitations stay unchanged.",
+              );
+            } catch (ex) {
+              setError((ex as Error).message);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          Set or reset password
+        </button>
         <Footer />
       </main>
     );

@@ -20,7 +20,7 @@ This source is deployment-prepared and locally tested. **It is not a live produc
 - Database sequences allocate IDs safely under concurrency. A person has `FDI-PERSON-137`; each event registration has `#FDI-JPS-P-137` using a separate global registration sequence. Registration serials never reset. Gaps after rolled-back imports are normal. Changing an event code affects future IDs; issued IDs remain stable unless role/event is explicitly changed.
 - 256-bit invitation/QR/verification tokens; SHA-256 lookups. Invitation cookies are HttpOnly, Secure in production, SameSite=Strict, expire in two hours, and are scoped to invitation API routes. Name matching ignores case/repeated whitespace; ID matching ignores case. Mismatches return one generic error.
 - Rate limits are atomic PostgreSQL counters, not unreliable process memory. Raw IP addresses are not stored. `RATE_LIMIT_SECRET` salts rate-limit identifiers. Limits: unlock 30/IP and 20/token per 15 minutes; staff API 300/minute; public certificate verification 60/minute.
-- API mutations require the configured same origin. Authenticated operations require a bearer token; all staff require a verified TOTP factor, an `aal2` session, and acceptance of the current staff terms. All output is escaped by React, URLs are validated, and CSP/referrer/cache headers protect private pages.
+- API mutations require the configured same origin. Authenticated operations require a bearer token; staff must accept the current staff terms. TOTP enrollment is optional; accounts with a verified TOTP factor must verify it to obtain an `aal2` session. New invited accounts set a password before accessing records. All output is escaped by React, URLs are validated, and CSP/referrer/cache headers protect private pages.
 - Check-in locks the registration and revalidates invitation state before writing. One `check_ins` row per registration. Scanning has no write side effect. Undo is audited and revokes any issued certificate.
 - Scanner staff never receive personal email, phone, or emergency contact fields. Admin list responses omit emergency contacts; elevated exports fetch them separately and are audited. Soft-removal preserves history and revokes invitation/certificate access.
 
@@ -59,7 +59,7 @@ where email='YOUR_OWNER_EMAIL';
 
 6. Sign in as the owner and invite staff from **Staff access**. Staff must be assigned appropriate events.
 7. Configure an SMTP provider before using magic links/invitations for external staff. Supabase's built-in test mailer is not a general production mail service. A provider's free tier can be used; no SMTP credentials belong in this application or GitHub.
-8. Complete mandatory TOTP enrollment/verification and accept staff terms at first sign-in. The Worker blocks data access until both are complete.
+8. Invited staff create a password, accept staff terms, and enter their role-scoped dashboard. TOTP enrollment is optional in Account security; once enabled it is required at sign-in. Existing accounts/invitations are preserved. Existing invited users can use Set or reset password on /admin with their email to obtain a setup link.
 
 `certificate-templates` is a public Storage bucket for approved **blank** templates only. No client upload policies are created. Scoped Worker uploads use the server key. Personalized certificates are generated on demand in the browser and not stored publicly.
 

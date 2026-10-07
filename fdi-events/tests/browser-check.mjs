@@ -169,7 +169,7 @@ try {
     },
   );
   await check(
-    "TOTP enrollment, incorrect code rejection, and staff terms gate protect the dashboard",
+    "Optional TOTP enrollment, incorrect code rejection, and staff terms gate protect the dashboard",
     async () => {
       h.authState.verified = false;
       await h.db.exec(
@@ -244,6 +244,17 @@ try {
       );
       const m = await mc.newPage();
       await m.goto(base + "/admin");
+      await m
+        .getByRole("heading", { name: "Privacy & staff responsibilities" })
+        .waitFor();
+      await m.getByRole("checkbox").check();
+      await m.getByRole("button", { name: "Accept & continue" }).click();
+      await m
+        .getByRole("heading", { name: "Attendees", exact: true })
+        .waitFor();
+      await m
+        .getByRole("button", { name: "Account security", exact: true })
+        .click();
       await m.getByRole("button", { name: "Set up TOTP" }).click();
       await m.getByAltText("Secure FDI pass QR code").waitFor();
       await m
@@ -259,17 +270,6 @@ try {
       );
       await m.getByLabel("Six-digit authenticator code").fill(totp());
       await m.getByRole("button", { name: "Verify code", exact: true }).click();
-      await m
-        .getByRole("heading", { name: "Privacy & staff responsibilities" })
-        .waitFor();
-      assert.equal(
-        await m
-          .getByRole("heading", { name: "Attendees", exact: true })
-          .count(),
-        0,
-      );
-      await m.getByRole("checkbox").check();
-      await m.getByRole("button", { name: "Accept & continue" }).click();
       await m
         .getByRole("heading", { name: "Attendees", exact: true })
         .waitFor();

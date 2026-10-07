@@ -206,7 +206,7 @@ test("Staff ID links, edits, role scope and terms acceptance are audited without
   );
   await h.db.exec("reset role");
 });
-test("Server blocks missing TOTP, aal1, and unaccepted terms even with a valid account", async () => {
+test("Server allows optional enrollment but enforces activated TOTP and current staff terms", async () => {
   const env = {
     SUPABASE_URL: "https://fdi-test.supabase.co",
     SUPABASE_ANON_KEY: "test",
@@ -229,9 +229,60 @@ test("Server blocks missing TOTP, aal1, and unaccepted terms even with a valid a
       env,
     );
   h.authState.verified = false;
-  assert.equal((await req("/admin", { action: "bootstrap" })).status, 403);
+  assert.equal(
+    (await req("/admin", { action: "bootstrap" }, ownerAal1Token)).status,
+    200,
+  );
   let gate: any = await (await req("/security")).json();
   assert.equal(gate.needs_enrollment, true);
+  assert.equal(gate.needs_mfa, false);
+  h.authState.needsPassword = true;
+  assert.equal(
+    (await req("/admin", { action: "bootstrap" }, ownerAal1Token)).status,
+    403,
+  );
+  gate = await (await req("/security", undefined, ownerAal1Token)).json();
+  assert.equal(gate.needs_password, true);
+  const beforePeople = await h.db.query(
+    "select id,serial,public_id from people order by id",
+  );
+  const beforeStaff = await h.db.query(
+    "select user_id,role,enabled from staff order by user_id",
+  );
+  assert.equal(
+    (await req("/security/password", { password: "short" }, ownerAal1Token))
+      .status,
+    400,
+  );
+  assert.equal(
+    (
+      await req(
+        "/security/password",
+        { password: "A-long-test-password-2026" },
+        ownerAal1Token,
+      )
+    ).status,
+    200,
+  );
+  assert.equal(h.authState.passwordUpdates, 1);
+  assert.equal(h.authState.needsPassword, false);
+  assert.deepEqual(
+    (await h.db.query("select id,serial,public_id from people order by id"))
+      .rows,
+    beforePeople.rows,
+  );
+  assert.deepEqual(
+    (
+      await h.db.query(
+        "select user_id,role,enabled from staff order by user_id",
+      )
+    ).rows,
+    beforeStaff.rows,
+  );
+  assert.equal(
+    (await req("/admin", { action: "bootstrap" }, ownerAal1Token)).status,
+    200,
+  );
   h.authState.verified = true;
   assert.equal(
     (await req("/admin", { action: "bootstrap" }, ownerAal1Token)).status,

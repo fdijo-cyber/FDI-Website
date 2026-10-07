@@ -1,6 +1,7 @@
 // Isolated PostgreSQL/Supabase protocol substitute for tests. NEVER imported by production.
 import { PGlite } from "@electric-sql/pglite";
 import { readFileSync } from "node:fs";
+import assert from "node:assert/strict";
 import { hash, randomToken } from "../../server/worker";
 export const testOwner = "11111111-1111-4111-8111-111111111111",
   testStaff = "22222222-2222-4222-8222-222222222222",
@@ -34,7 +35,11 @@ export const ownerAal1Token =
   ).toString("base64url") +
   ".test-only-signature";
 export async function harness() {
-  const authState = { verified: true };
+  const authState = {
+    verified: true,
+    needsPassword: false,
+    passwordUpdates: 0,
+  };
   const uploads: { path: string; type: string | null; size: number }[] = [];
   const db = new PGlite();
   await db.exec(
@@ -115,12 +120,29 @@ export async function harness() {
               },
             ]
           : [],
-        app_metadata: { provider: "email" },
+        app_metadata: {
+          provider: "email",
+          fdi_password_setup_required: authState.needsPassword,
+        },
         user_metadata: {},
         aud: "authenticated",
         created_at: new Date().toISOString(),
       };
-    else if (u.pathname.startsWith("/rest/v1/rpc/")) {
+    else if (
+      u.pathname === "/auth/v1/admin/users/" + testOwner &&
+      request.method === "PUT"
+    ) {
+      const change = (await request.json()) as any;
+      assert.equal(change.password.length >= 12, true);
+      assert.equal(change.app_metadata.provider, "email");
+      authState.needsPassword = change.app_metadata.fdi_password_setup_required;
+      authState.passwordUpdates++;
+      data = {
+        id: testOwner,
+        email: "owner@example.com",
+        app_metadata: change.app_metadata,
+      };
+    } else if (u.pathname.startsWith("/rest/v1/rpc/")) {
       const fn = u.pathname.split("/").pop()!;
       const args = (await request.json()) as any;
       const names = Object.keys(args);

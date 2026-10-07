@@ -2,6 +2,79 @@ import { useEffect, useState } from "react";
 import { auth, api } from "./api";
 import { Brand, Notice, QR, Footer } from "./components";
 export const TERMS_VERSION = "2026-10-07";
+export function PasswordSetup({ onComplete }: { onComplete: () => void }) {
+  const [password, setPassword] = useState(""),
+    [confirm, setConfirm] = useState(""),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  return (
+    <main className="public-shell login">
+      <Brand />
+      <div className="eyebrow">YOUR FDI STAFF ACCOUNT</div>
+      <h1>Create your password</h1>
+      <p>
+        Set a password for your existing account to continue to the official
+        dashboard. Authenticator setup is optional in Account security.
+      </p>
+      {error && <Notice error>{error}</Notice>}
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setError("");
+          if (password !== confirm) {
+            setError("The passwords do not match.");
+            return;
+          }
+          setBusy(true);
+          try {
+            await api("/security/password", { password }, true);
+            // Refresh the JWT after server-managed onboarding metadata changes.
+            const result = await (await auth()).auth.refreshSession();
+            if (result.error) throw result.error;
+            sessionStorage.removeItem("fdi-password-setup");
+            setPassword("");
+            setConfirm("");
+            onComplete();
+          } catch (ex) {
+            setError((ex as Error).message);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <label className="field">
+          New password
+          <input
+            type="password"
+            autoComplete="new-password"
+            minLength={12}
+            maxLength={128}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </label>
+        <label className="field">
+          Confirm password
+          <input
+            type="password"
+            autoComplete="new-password"
+            minLength={12}
+            maxLength={128}
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            required
+          />
+        </label>
+        <p className="muted">Use at least 12 characters.</p>
+        <button disabled={busy}>
+          {busy ? "Saving…" : "Save password & continue"}
+        </button>
+      </form>
+      <Footer />
+    </main>
+  );
+}
 export function Authenticator({ onVerified }: { onVerified: () => void }) {
   const [factor, setFactor] = useState<any>(null),
     [factors, setFactors] = useState<any[]>([]),
@@ -59,6 +132,10 @@ export function Authenticator({ onVerified }: { onVerified: () => void }) {
       <p>
         Use Google Authenticator, Microsoft Authenticator, or another TOTP app.
         Set your phone’s clock to automatic.
+      </p>
+      <p>
+        Authenticator setup is optional. Once enabled, its code is required when
+        you sign in.
       </p>
       {error && <Notice error>{error}</Notice>}
       {!factors.length && !factor && (
@@ -142,6 +219,40 @@ export function Authenticator({ onVerified }: { onVerified: () => void }) {
             {busy ? "Verifying…" : "Verify code"}
           </button>
         </form>
+      )}
+      {factors.length > 0 && (
+        <button
+          className="secondary"
+          disabled={busy}
+          onClick={async () => {
+            if (!confirm("Turn off your account’s authenticator protection?"))
+              return;
+            setBusy(true);
+            setError("");
+            try {
+              const c = await auth();
+              const assurance =
+                await c.auth.mfa.getAuthenticatorAssuranceLevel();
+              if (assurance.error) throw assurance.error;
+              if (assurance.data.currentLevel !== "aal2")
+                throw new Error(
+                  "Verify your authenticator code first, then turn it off in Account security.",
+                );
+              for (const f of factors) {
+                const r = await c.auth.mfa.unenroll({ factorId: f.id });
+                if (r.error) throw r.error;
+              }
+              setFactors([]);
+              onVerified();
+            } catch (ex) {
+              setError((ex as Error).message);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          Turn off authenticator
+        </button>
       )}
     </section>
   );

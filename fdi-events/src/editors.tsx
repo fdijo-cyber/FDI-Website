@@ -7,6 +7,10 @@ import { Field, Status, Notice, QR as SecurityQR } from "./components";
 import type { Attendee, Event, Staff } from "./types";
 import { Authenticator } from "./security";
 import { exportPassQR } from "./qr-export";
+import {
+  gmailInvitationUrl,
+  copyFormattedInvitation,
+} from "./invitation-email";
 import { EventSchedule } from "./event-details";
 import { scheduleItemSchema } from "../server/validation";
 import { z } from "zod";
@@ -130,14 +134,13 @@ export function PersonEditor({
     try {
       if (kind === "link") await navigator.clipboard.writeText(url);
       if (kind === "message") await navigator.clipboard.writeText(msg);
+      if (kind === "formatted") await copyFormattedInvitation(a, event);
       if (kind === "email")
-        location.href =
-          "mailto:" +
-          encodeURIComponent(a.email) +
-          "?subject=" +
-          encodeURIComponent("Your invitation · " + event.name) +
-          "&body=" +
-          encodeURIComponent(msg);
+        window.open(
+          gmailInvitationUrl(a, event),
+          "_blank",
+          "noopener,noreferrer",
+        );
       if (kind === "whatsapp")
         window.open(
           "https://wa.me/" +
@@ -158,7 +161,9 @@ export function PersonEditor({
           ? "Invitation link copied."
           : kind === "message"
             ? "Invitation message copied."
-            : "Message prepared. Mark it sent after sending.",
+            : kind === "formatted"
+              ? "Formatted email copied. In Gmail, select the message body and paste to replace it with the styled invitation."
+              : "Message prepared. Review the Gmail sender account and mark it sent after sending.",
       );
     } catch (e) {
       setError((e as Error).message);
@@ -381,7 +386,15 @@ export function PersonEditor({
                 disabled={!a.invitation_token || !a.email}
               >
                 <Mail size={16} />
-                Email invitation
+                Open Gmail invitation
+              </button>
+              <button
+                className="secondary"
+                onClick={() => deliver("EMAIL", "formatted")}
+                disabled={!a.invitation_token}
+              >
+                <Copy size={16} />
+                Copy formatted email
               </button>
               <button
                 className="secondary"

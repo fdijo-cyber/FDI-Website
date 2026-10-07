@@ -19,6 +19,14 @@ export interface Event {
   contact_phone: string;
   partner: string;
   partner_logo_url: string;
+  cover_image_url: string;
+  schedule_image_url: string;
+  schedule_items: {
+    time: string;
+    title: string;
+    details: string;
+    track: string;
+  }[];
   schedule: string;
   instructions: string;
   disclaimer: string;
@@ -34,6 +42,7 @@ export interface Attendee {
   id: string;
   person_id: string;
   person_fdi_id: string;
+  public_id: string;
   event_id: string;
   name: string;
   fdi_id: string;
@@ -54,6 +63,10 @@ export interface Attendee {
   created_at: string;
 }
 export interface Staff {
+  full_name?: string;
+  public_id?: string;
+  person_id?: string;
+  terms_accepted_at?: string;
   user_id: string;
   email: string;
   role: string;

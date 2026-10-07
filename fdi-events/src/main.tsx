@@ -17,9 +17,12 @@ const AdminApp = lazy(() =>
 );
 import { Brand, Footer } from "./components";
 import "./styles.css";
+import { Policy } from "./policies";
 const path = location.pathname;
 let page;
-if (path.startsWith("/invite/"))
+if (path === "/privacy" || path === "/terms")
+  page = <Policy kind={path.slice(1) as "privacy" | "terms"} />;
+else if (path.startsWith("/invite/"))
   page = <PublicInvitation token={path.split("/")[2]} />;
 else if (path.startsWith("/certificate/"))
   page = <CertificateDownload token={path.split("/")[2]} />;

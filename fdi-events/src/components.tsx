@@ -18,6 +18,9 @@ export function Footer() {
   return (
     <footer>
       <strong>Free medical knowledge for all.</strong>
+      <nav aria-label="Legal">
+        <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a>
+      </nav>
       <a href="mailto:info@futuredoctorinitiative.org">
         info@futuredoctorinitiative.org
       </a>
@@ -158,6 +161,7 @@ export function Field({
   type = "text",
   required = false,
   area = false,
+  disabled = false,
 }: {
   label: string;
   name: string;
@@ -166,6 +170,7 @@ export function Field({
   type?: string;
   required?: boolean;
   area?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <label className="field">
@@ -173,6 +178,7 @@ export function Field({
       {area ? (
         <textarea
           name={name}
+          disabled={disabled}
           value={value}
           onChange={(e) => onChange(name, e.target.value)}
           rows={4}
@@ -180,6 +186,7 @@ export function Field({
       ) : (
         <input
           name={name}
+          disabled={disabled}
           type={type}
           value={value}
           onChange={(e) => onChange(name, e.target.value)}

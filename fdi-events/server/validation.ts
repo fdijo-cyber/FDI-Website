@@ -5,6 +5,21 @@ const url = z.union([
   z.url().refine((s) => s.startsWith("https://"), "Use an HTTPS URL"),
 ]);
 const optionalText = text.optional().default("");
+export const identifierSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .max(80)
+  .regex(
+    /^$|^#?[A-Z0-9][A-Z0-9_-]{1,78}$/,
+    "Use letters, numbers, hyphens or underscores",
+  );
+export const scheduleItemSchema = z.object({
+  time: z.string().max(32),
+  title: z.string().trim().min(1).max(160),
+  details: z.string().max(2000).default(""),
+  track: z.string().max(60).default(""),
+});
 export const personSchema = z.object({
   full_name: z.string().trim().min(2).max(160),
   role_code: z.enum(["P", "T", "V", "TR", "S", "G"]),
@@ -27,6 +42,7 @@ export const personSchema = z.object({
     .regex(/^[+\d\s().-]*$/)
     .optional()
     .default(""),
+  public_id: identifierSchema.optional(),
   person_id: z.uuid().optional(),
   allow_duplicate: z.boolean().optional().default(false),
 });
@@ -65,6 +81,9 @@ export const eventSchema = z
     contact_phone: z.string().max(32).default("+962 7 9055 6148"),
     partner: optionalText,
     partner_logo_url: url.default(""),
+    cover_image_url: url.default(""),
+    schedule_image_url: url.default(""),
+    schedule_items: z.array(scheduleItemSchema).max(100).default([]),
     schedule: z.string().max(16000).default(""),
     instructions: z.string().max(8000).default(""),
     disclaimer: z
@@ -110,6 +129,19 @@ export function validateAdmin(
   if (action === "staff_save")
     return z
       .object({
+        full_name: z
+          .string()
+          .trim()
+          .min(2)
+          .max(160)
+          .optional()
+          .nullable()
+          .transform((v) => v ?? undefined),
+        public_id: identifierSchema
+          .optional()
+          .nullable()
+          .transform((v) => v ?? undefined),
+        person_id: z.uuid().optional().nullable(),
         user_id: z.uuid(),
         email: z.email(),
         role: z.enum([
@@ -131,7 +163,9 @@ export function validateAdmin(
       })
       .parse(p);
   if (action === "event_save") return eventSchema.parse(p);
-  if (["attendees", "audit", "emergency_export"].includes(action))
+  if (
+    ["attendees", "audit", "emergency_export", "badge_export"].includes(action)
+  )
     return { event_id: eventId() };
   if (action === "people_search")
     return {

@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { writeFileSync } from "node:fs";
@@ -167,6 +168,114 @@ try {
       }
     },
   );
+  await check(
+    "TOTP enrollment, incorrect code rejection, and staff terms gate protect the dashboard",
+    async () => {
+      h.authState.verified = false;
+      await h.db.exec(
+        "update staff set terms_version=null where email='owner@example.com'",
+      );
+      const mc = await context("owner");
+      const factorId = "44444444-4444-4444-8444-444444444444";
+      const secret = Buffer.from("12345678901234567890");
+      const totp = () => {
+        const b = Buffer.alloc(8);
+        b.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000)));
+        const digest = createHmac("sha1", secret).update(b).digest();
+        const offset = digest[19] & 15;
+        return String(
+          (digest.readUInt32BE(offset) & 0x7fffffff) % 1000000,
+        ).padStart(6, "0");
+      };
+      const user = () => ({
+        id: "11111111-1111-4111-8111-111111111111",
+        email: "owner@example.com",
+        app_metadata: {},
+        user_metadata: {},
+        aud: "authenticated",
+        factors: h.authState.verified
+          ? [{ id: factorId, factor_type: "totp", status: "verified" }]
+          : [],
+      });
+      await mc.route(
+        "https://fdi-test.supabase.co/auth/v1/**",
+        async (route) => {
+          const url = route.request().url();
+          if (url.endsWith("/user")) return route.fulfill({ json: user() });
+          if (url.endsWith("/factors"))
+            return route.fulfill({
+              json: {
+                id: factorId,
+                type: "totp",
+                totp: {
+                  uri: "otpauth://totp/FDI:test?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer=FDI",
+                  secret: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+                  qr_code: "",
+                },
+              },
+            });
+          if (url.endsWith("/challenge"))
+            return route.fulfill({
+              json: {
+                id: "test-challenge",
+                type: "totp",
+                expires_at: Math.floor(Date.now() / 1000) + 300,
+              },
+            });
+          if (url.endsWith("/verify")) {
+            if (route.request().postDataJSON().code !== totp())
+              return route.fulfill({
+                status: 422,
+                json: { msg: "Invalid authenticator code" },
+              });
+            h.authState.verified = true;
+            return route.fulfill({
+              json: {
+                access_token: records.ownerToken,
+                refresh_token: "test-only-refresh",
+                token_type: "bearer",
+                expires_in: 3600,
+                user: user(),
+              },
+            });
+          }
+          return route.fulfill({ json: {} });
+        },
+      );
+      const m = await mc.newPage();
+      await m.goto(base + "/admin");
+      await m.getByRole("button", { name: "Set up TOTP" }).click();
+      await m.getByAltText("Secure FDI pass QR code").waitFor();
+      await m
+        .getByLabel("Six-digit authenticator code")
+        .fill(totp() === "000000" ? "111111" : "000000");
+      await m.getByRole("button", { name: "Verify code", exact: true }).click();
+      await m.getByRole("alert").waitFor();
+      assert.equal(
+        await m
+          .getByRole("heading", { name: "Attendees", exact: true })
+          .count(),
+        0,
+      );
+      await m.getByLabel("Six-digit authenticator code").fill(totp());
+      await m.getByRole("button", { name: "Verify code", exact: true }).click();
+      await m
+        .getByRole("heading", { name: "Privacy & staff responsibilities" })
+        .waitFor();
+      assert.equal(
+        await m
+          .getByRole("heading", { name: "Attendees", exact: true })
+          .count(),
+        0,
+      );
+      await m.getByRole("checkbox").check();
+      await m.getByRole("button", { name: "Accept & continue" }).click();
+      await m
+        .getByRole("heading", { name: "Attendees", exact: true })
+        .waitFor();
+      await mc.close();
+    },
+  );
   const ac = await context("owner");
   const a = await ac.newPage();
   await a.goto(base + "/admin");
@@ -178,31 +287,108 @@ try {
       await a.getByLabel("Full name", { exact: true }).fill("Maria Lopez");
       await a.getByLabel("Email · admin only").fill("maria@example.com");
       await a
+        .getByLabel("Permanent custom FDI ID (optional)")
+        .fill("FDI-MARIA-137");
+      await a
         .getByRole("button", { name: "Create invitation", exact: true })
         .click();
       await a
         .getByText("Attendee created. Copy the personal invitation below.")
         .waitFor();
+      const qrDownload = a.waitForEvent("download");
+      await a.getByRole("button", { name: "Download QR · SVG" }).click();
+      assert.match(
+        (await qrDownload).suggestedFilename(),
+        /FDI-MARIA-137-QR.svg/,
+      );
       await a.getByRole("button", { name: "Close", exact: true }).click();
       await a.getByRole("row").filter({ hasText: "Maria Lopez" }).waitFor();
+      await a.getByText("FDI-MARIA-137", { exact: true }).waitFor();
       await a.getByRole("textbox", { name: "Search attendees" }).fill("Maria");
       assert.equal(await a.locator(".attendees-table tbody tr").count(), 1);
       await a.getByRole("textbox", { name: "Search attendees" }).fill("");
     },
   );
   await check(
+    "Badge CSV exports real private QR links for design imports",
+    async () => {
+      const d = a.waitForEvent("download");
+      await a.getByRole("button", { name: "Badge import CSV" }).click();
+      assert.match((await d).suggestedFilename(), /badge-import.csv/);
+    },
+  );
+  await check(
+    "Invitation event artwork, highlighted date, interactive schedule and map window work",
+    async () => {
+      const item = [
+        {
+          time: "09:00",
+          title: "Welcome & registration",
+          details: "Present your QR pass",
+          track: "Main",
+        },
+        {
+          time: "10:00",
+          title: "Practical workshop",
+          details: "Trainer-led session",
+          track: "Skills",
+        },
+      ];
+      await h.db.query(
+        "update events set venue='Amman Training Centre',address='Amman, Jordan',cover_image_url='https://example.com/test-cover.png',schedule_items=$1::jsonb where id=$2",
+        [JSON.stringify(item), "a11fd100-0000-4000-8000-000000000001"],
+      );
+      await c.route("https://example.com/test-cover.png", (route) =>
+        route.fulfill({
+          contentType: "image/png",
+          body: Buffer.from(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a4RsAAAAASUVORK5CYII=",
+            "base64",
+          ),
+        }),
+      );
+      await p.reload();
+      await p.locator(".event-cover").waitFor();
+      await p.locator(".date-highlight").waitFor();
+      await p.getByText("View event schedule", { exact: true }).click();
+      await p.getByLabel("Schedule track").selectOption("Skills");
+      assert.equal(
+        await p.getByText("Welcome & registration", { exact: true }).count(),
+        0,
+      );
+      await p.getByText("Session details", { exact: true }).click();
+      await p.getByText("Trainer-led session", { exact: true }).waitFor();
+      await p.getByRole("button", { name: "Open Google Maps" }).click();
+      await p.locator('iframe[title="Google Maps event location"]').waitFor();
+      await p
+        .getByRole("link", { name: "Get directions in Google Maps" })
+        .waitFor();
+      await p.getByRole("button", { name: "Close", exact: true }).click();
+      for (const width of [375, 390, 430, 768, 1366, 1440]) {
+        await p.setViewportSize({ width, height: 900 });
+        assert.ok(
+          await p.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth,
+          ),
+        );
+      }
+      await p.screenshot({
+        path: "qa/invitation-updated-390.png",
+        fullPage: true,
+      });
+    },
+  );
+  await check(
     "CSV preview shows row errors and imports valid records",
     async () => {
       await a.getByRole("button", { name: "Import CSV", exact: true }).click();
-      await a
-        .getByLabel("Upload CSV")
-        .setInputFiles({
-          name: "attendees.csv",
-          mimeType: "text/csv",
-          buffer: Buffer.from(
-            "full_name,role,email\nSarah Ali,Volunteer,sarah@example.com\nBad Entry,Unknown,bad-email\n",
-          ),
-        });
+      await a.getByLabel("Upload CSV").setInputFiles({
+        name: "attendees.csv",
+        mimeType: "text/csv",
+        buffer: Buffer.from(
+          "full_name,role,email\nSarah Ali,Volunteer,sarah@example.com\nBad Entry,Unknown,bad-email\n",
+        ),
+      });
       await a.getByText("role_code:", { exact: false }).waitFor();
       await a
         .getByRole("button", { name: "Import 1 valid records", exact: true })

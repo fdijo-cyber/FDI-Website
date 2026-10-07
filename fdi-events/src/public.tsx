@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { api, date, download, timestamp } from "./api";
 import { Brand, Footer, Status, Notice, QR, Field } from "./components";
+import { EventSchedule, EventMap } from "./event-details";
+import { exportPassQR } from "./qr-export";
 import type { Invitation, Event } from "./types";
 const escapeICS = (s: string) =>
   s
@@ -145,12 +147,23 @@ export function PublicInvitation({ token }: { token: string }) {
             </div>
           )}
         </div>
+        {e.cover_image_url && (
+          <img
+            className="event-cover"
+            src={e.cover_image_url}
+            alt={e.name + " event artwork"}
+          />
+        )}
         <div className="invitation-title">
           <div className="eyebrow">YOU’RE INVITED</div>
           <h1>{invite.name}</h1>
           <span className="role-label">{invite.role}</span>
           <h2>{e.name}</h2>
-          <p>{date(e.event_date)}</p>
+          <div className="date-highlight">
+            <CalendarDays size={22} />
+            <strong>{date(e.event_date)}</strong>
+            <span>{e.start_time || "Time to be announced"}</span>
+          </div>
         </div>
         <div className="pass-card">
           <div>
@@ -167,6 +180,16 @@ export function PublicInvitation({ token }: { token: string }) {
               <>
                 <QR value={location.origin + "/check/" + invite.qr_token} />
                 <small>Present this pass at registration</small>
+                <button
+                  className="text-button"
+                  onClick={() =>
+                    exportPassQR(invite.qr_token!, invite.fdi_id, "png").catch(
+                      (e) => setError(e.message),
+                    )
+                  }
+                >
+                  Download QR pass
+                </button>
               </>
             ) : (
               <div className="qr-placeholder">
@@ -239,27 +262,13 @@ export function PublicInvitation({ token }: { token: string }) {
           <button className="secondary" onClick={() => calendar(e)}>
             Add to calendar
           </button>
-          {(e.directions_url || e.maps_url) && (
-            <a
-              className="button secondary"
-              href={e.directions_url || e.maps_url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Get directions
-            </a>
-          )}
+          <EventMap event={e} />
           <a className="button secondary" href={"mailto:" + e.contact_email}>
             <Mail size={16} />
             Contact FDI
           </a>
         </div>
-        <details className="schedule">
-          <summary>View event schedule</summary>
-          <p className="preserve">
-            {e.schedule || "The schedule will be added here by FDI."}
-          </p>
-        </details>
+        <EventSchedule event={e} />
         {e.instructions && (
           <section>
             <h3>Additional instructions</h3>
@@ -384,11 +393,18 @@ export function PublicEvent({ id }: { id: string }) {
       ) : e?.name ? (
         <>
           <div className="eyebrow">FDI EVENT</div>
+          {e.cover_image_url && (
+            <img className="event-cover" src={e.cover_image_url} alt={e.name} />
+          )}
           <h1>{e.name}</h1>
-          <p>{date(e.date)}</p>
+          <div className="date-highlight">
+            <CalendarDays />
+            <strong>{date(e.date)}</strong>
+          </div>
           <p>{e.description}</p>
           <p>{e.venue || "Venue to be announced"}</p>
-          <p className="preserve">{e.schedule}</p>
+          <EventMap event={e} />
+          <EventSchedule event={e} />
         </>
       ) : (
         <p>Loading event…</p>

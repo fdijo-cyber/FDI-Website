@@ -11,7 +11,7 @@ export async function auth() {
         storage: sessionStorage,
         persistSession: true,
         detectSessionInUrl: true,
-        flowType: "pkce",
+        flowType: "implicit",
       },
     });
   }

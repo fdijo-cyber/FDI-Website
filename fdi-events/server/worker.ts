@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { adminSchema, validateAdmin } from "./validation";
+import { adminSchema, validateAdmin, identifierSchema } from "./validation";
 export interface Env {
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
@@ -28,7 +28,7 @@ const securityHeaders = {
   "X-Frame-Options": "DENY",
   "Permissions-Policy": "camera=(self), microphone=(), geolocation=()",
   "Content-Security-Policy":
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
 };
 export async function handle(request: Request, env: Env): Promise<Response> {
   const u = new URL(request.url);
@@ -181,7 +181,7 @@ export async function handle(request: Request, env: Env): Promise<Response> {
         const b = z
           .object({
             name: z.string().trim().min(2).max(160),
-            fdi_id: z.string().trim().min(5).max(80),
+            fdi_id: z.string().trim().min(2).max(80),
           })
           .parse(await body());
         const newSession = randomToken();
@@ -229,25 +229,99 @@ export async function handle(request: Request, env: Env): Promise<Response> {
         401,
       );
     const actor = user.user.id;
-    if (user.user.factors?.some((f) => f.status === "verified")) {
-      const claims = JSON.parse(
-        atob(bearer.split(".")[1].replaceAll("-", "+").replaceAll("_", "/")),
-      );
-      if (claims.aal !== "aal2")
-        return json(
-          {
-            error:
-              "Complete multi-factor authentication to access the staff workspace.",
-          },
-          403,
-        );
-    }
     await rate("staff:" + actor, 300, 60);
+    // getUser validates the bearer before its assurance claim is used.
+    const claims = JSON.parse(
+      atob(bearer.split(".")[1].replaceAll("-", "+").replaceAll("_", "/")),
+    );
+    const verifiedFactor =
+      user.user.factors?.some(
+        (f) => f.factor_type === "totp" && f.status === "verified",
+      ) ?? false;
+    const security = await rpc("fdi_security", {
+      actor,
+      action: "status",
+      version: null,
+    });
+    const needsMfa = !verifiedFactor || claims.aal !== "aal2";
+    const needsTerms =
+      security.terms_version !== security.required_terms_version;
+    if (u.pathname === "/api/security" && request.method === "GET")
+      return json({
+        ...security,
+        needs_mfa: needsMfa,
+        needs_enrollment: !verifiedFactor,
+        needs_terms: needsTerms,
+      });
+    if (needsMfa)
+      return json(
+        {
+          error:
+            "Set up and verify your authenticator to access the staff workspace.",
+          code: "MFA_REQUIRED",
+        },
+        403,
+      );
+    if (u.pathname === "/api/security/terms" && request.method === "POST") {
+      const b = z
+        .object({ version: z.literal("2026-10-07") })
+        .parse(await body());
+      return json(
+        await rpc("fdi_security", {
+          actor,
+          action: "accept_terms",
+          version: b.version,
+        }),
+      );
+    }
+    if (needsTerms)
+      return json(
+        {
+          error:
+            "Accept the current privacy and staff terms before accessing FDI records.",
+          code: "TERMS_REQUIRED",
+        },
+        403,
+      );
     const bootstrap = await rpc("fdi_admin", {
       actor,
       action: "bootstrap",
       payload: {},
     });
+    if (u.pathname === "/api/media" && request.method === "POST") {
+      const eid = z.uuid().parse(u.searchParams.get("event"));
+      if (
+        bootstrap.staff.role === "CHECK_IN_STAFF" ||
+        !bootstrap.events.some((e: any) => e.id === eid)
+      )
+        throw new Error("FORBIDDEN");
+      const length = Number(request.headers.get("Content-Length") || 0);
+      if (length > 5242880) throw new Error("PAYLOAD_TOO_LARGE");
+      const bytes = new Uint8Array(await request.arrayBuffer());
+      if (bytes.length > 5242880 || bytes.length < 12)
+        throw new Error("PAYLOAD_TOO_LARGE");
+      const mime =
+        bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff
+          ? "image/jpeg"
+          : bytes
+                .slice(0, 8)
+                .every((v, i) => v === [137, 80, 78, 71, 13, 10, 26, 10][i])
+            ? "image/png"
+            : new TextDecoder().decode(bytes.slice(0, 4)) === "RIFF" &&
+                new TextDecoder().decode(bytes.slice(8, 12)) === "WEBP"
+              ? "image/webp"
+              : "";
+      if (!mime || request.headers.get("Content-Type")?.split(";")[0] !== mime)
+        throw new Error("INVALID_IMAGE");
+      const path = eid + "/" + randomToken() + "." + mime.split("/")[1];
+      const { error } = await db.storage
+        .from("event-media")
+        .upload(path, bytes, { contentType: mime, upsert: false });
+      if (error) throw new Error("UPLOAD_FAILED");
+      return json({
+        url: db.storage.from("event-media").getPublicUrl(path).data.publicUrl,
+      });
+    }
     if (u.pathname === "/api/template" && request.method === "POST") {
       const eid = z.uuid().parse(u.searchParams.get("event"));
       if (
@@ -294,6 +368,16 @@ export async function handle(request: Request, env: Env): Promise<Response> {
       await rate("staff-invite:" + actor, 10, 3600);
       const b = z
         .object({
+          attendee_role_code: z
+            .enum(["P", "T", "V", "TR", "S", "G"])
+            .default("T"),
+          create_event_passes: z.boolean().default(true),
+          full_name: z.string().trim().min(2).max(160),
+          public_id: identifierSchema.refine(
+            (v) => v.length >= 2,
+            "Enter the staff ID",
+          ),
+          person_id: z.uuid().optional(),
           email: z.email(),
           role: z.enum([
             "SUPER_ADMIN",
@@ -315,16 +399,58 @@ export async function handle(request: Request, env: Env): Promise<Response> {
           { error: "Choose valid assigned events for this staff role." },
           400,
         );
-      const { data, error } = await db.auth.admin.inviteUserByEmail(b.email, {
-        redirectTo: env.APP_ORIGIN + "/auth/callback",
+      await rpc("fdi_staff_preflight", { actor, payload: b });
+      const existingId = await rpc("fdi_auth_lookup", {
+        actor,
+        email_input: b.email,
       });
-      if (error || !data.user) throw new Error("STAFF_INVITE_FAILED");
-      await rpc("fdi_admin", {
+      let userId = existingId;
+      if (!userId) {
+        const invited = await db.auth.admin.inviteUserByEmail(b.email, {
+          redirectTo: env.APP_ORIGIN + "/auth/callback",
+        });
+        if (invited.error || !invited.data.user)
+          throw new Error("STAFF_INVITE_FAILED");
+        userId = invited.data.user.id;
+      }
+      const event_passes = b.create_event_passes
+        ? await Promise.all(
+            b.events.map(async (event_id) => {
+              const token = randomToken(),
+                qr_token = randomToken();
+              return {
+                event_id,
+                role_code: b.attendee_role_code,
+                token,
+                qr_token,
+                token_hash: await hash(token),
+                qr_hash: await hash(qr_token),
+              };
+            }),
+          )
+        : [];
+      const saved = await rpc("fdi_admin", {
         actor,
         action: "staff_save",
-        payload: { user_id: data.user.id, ...b, enabled: true },
+        payload: { user_id: userId, ...b, enabled: true, event_passes },
       });
-      return json({ ok: true });
+      if (existingId) {
+        const sent = await db.auth.signInWithOtp({
+          email: b.email,
+          options: {
+            shouldCreateUser: false,
+            emailRedirectTo: env.APP_ORIGIN + "/auth/callback",
+          },
+        });
+        if (sent.error)
+          return json({
+            ok: true,
+            event_invitations: saved.event_invitations,
+            message:
+              "Access saved, but the email could not be delivered. Ask the staff member to request a sign-in link from /admin.",
+          });
+      }
+      return json({ ok: true, event_invitations: saved.event_invitations });
     }
     if (u.pathname === "/api/admin" && request.method === "POST") {
       const b = adminSchema.parse(await body());
@@ -411,6 +537,10 @@ export async function handle(request: Request, env: Env): Promise<Response> {
         400,
       );
     const known = [
+      "ID_ALREADY_USED",
+      "EVENT_ASSIGNMENT_REQUIRED",
+      "INVALID_CUSTOM_ID",
+      "INVALID_IMAGE",
       "RSVP_CLOSED",
       "INVITATION_INACTIVE",
       "LIKELY_DUPLICATE",
@@ -421,6 +551,13 @@ export async function handle(request: Request, env: Env): Promise<Response> {
       "CANNOT_MOVE_AFTER_ATTENDANCE",
     ];
     const messages: Record<string, string> = {
+      ID_ALREADY_USED:
+        "This ID is already reserved for another person. Choose a unique ID or select the existing person.",
+      EVENT_ASSIGNMENT_REQUIRED:
+        "Assign at least one event for this staff role.",
+      INVALID_CUSTOM_ID:
+        "Use a valid ID with letters, numbers, hyphens or underscores.",
+      INVALID_IMAGE: "Upload a PNG, JPEG or WebP image.",
       RSVP_CLOSED: "The RSVP deadline has passed. Contact FDI for assistance.",
       INVITATION_INACTIVE: "This invitation is inactive.",
       LIKELY_DUPLICATE:

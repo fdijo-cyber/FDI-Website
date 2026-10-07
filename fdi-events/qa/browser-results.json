@@ -1,0 +1,18 @@
+{
+  "passed": [
+    "Incorrect name and ID stay locked with generic errors",
+    "Correct name + ID opens invitation and RSVP controls work",
+    "Invitation fits 375,390,430,768,1366,1440px; seal remains 150px",
+    "TOTP enrollment, incorrect code rejection, and staff terms gate protect the dashboard",
+    "Admin stats use actual records; attendee create and search work",
+    "Badge CSV exports real private QR links for design imports",
+    "Invitation event artwork, highlighted date, interactive schedule and map window work",
+    "CSV preview shows row errors and imports valid records",
+    "Clipboard list excludes personal contacts and CSV exports",
+    "Staff sees only authorized scanner; verification requires confirmation",
+    "Certificates issue from attendance and public verification stays private",
+    "Admin creates a reusable future event without source edits"
+  ],
+  "date": "2026-10-07T05:59:23.354Z",
+  "note": "Synthetic auth protocol and database harness. Real Supabase email/auth and physical phone camera require deployment verification."
+}

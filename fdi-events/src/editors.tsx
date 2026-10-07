@@ -10,6 +10,7 @@ import { exportPassQR } from "./qr-export";
 import {
   openGmailInvitation,
   copyFormattedInvitation,
+  invitationEmail,
 } from "./invitation-email";
 import { EventSchedule } from "./event-details";
 import { scheduleItemSchema } from "../server/validation";
@@ -135,6 +136,12 @@ export function PersonEditor({
       if (kind === "link") await navigator.clipboard.writeText(url);
       if (kind === "message") await navigator.clipboard.writeText(msg);
       if (kind === "formatted") await copyFormattedInvitation(a, event);
+      if (kind === "html")
+        download(
+          `FDI-Invitation-${a.fdi_id.replace(/[^a-zA-Z0-9_-]/g, "")}.html`,
+          invitationEmail(a, event).html,
+          "text/html;charset=utf-8",
+        );
       if (kind === "email") openGmailInvitation(a, event);
       if (kind === "whatsapp")
         window.open(
@@ -158,7 +165,9 @@ export function PersonEditor({
             ? "Invitation message copied."
             : kind === "formatted"
               ? "Formatted email copied. In Gmail, select the message body and paste to replace it with the styled invitation."
-              : "Message prepared. Review the Gmail sender account and mark it sent after sending.",
+              : kind === "html"
+                ? "Personalized HTML invitation downloaded. To send its design in Gmail, use Copy formatted email and paste into the message body."
+                : "Message prepared. Review the Gmail sender account and mark it sent after sending.",
       );
     } catch (e) {
       setError((e as Error).message);
@@ -393,6 +402,13 @@ export function PersonEditor({
               </button>
               <button
                 className="secondary"
+                onClick={() => deliver("EMAIL", "html")}
+                disabled={!a.invitation_token}
+              >
+                Download HTML invitation
+              </button>
+              <button
+                className="secondary"
                 onClick={() => deliver("WHATSAPP", "whatsapp")}
                 disabled={!a.invitation_token || !a.phone}
               >
@@ -410,6 +426,33 @@ export function PersonEditor({
                 </a>
               )}
             </div>
+            {a.invitation_token && (
+              <details style={{ margin: "16px 0" }}>
+                <summary>Preview styled email</summary>
+                <p>
+                  To: {a.email || "Add the recipient’s email above"}
+                  <br />
+                  Subject: {invitationEmail(a, event).subject}
+                </p>
+                <p>
+                  Copy formatted email, open Gmail, then replace the message
+                  body by pasting. Attaching the HTML file sends a file
+                  attachment.
+                </p>
+                <iframe
+                  title={`Styled invitation for ${a.name}`}
+                  sandbox=""
+                  srcDoc={invitationEmail(a, event).html}
+                  style={{
+                    width: "100%",
+                    height: "760px",
+                    border: "1px solid #DAE3F7",
+                    borderRadius: "8px",
+                    background: "white",
+                  }}
+                />
+              </details>
+            )}
             <div className="actions">
               <span className="muted">Sending is manual.</span>
               <button

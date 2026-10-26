@@ -190,14 +190,17 @@ export async function handle(request: Request, env: Env): Promise<Response> {
         // fields are returned before both identity inputs match.
         const { data: invitation, error: invitationError } = await db.from("invitations")
           .select("registration_id").eq("token_hash", token_hash).maybeSingle();
-        if (invitationError || !invitation) throw new Error("UNVERIFIED");
+        if (invitationError) { console.error("Invitation lookup failed", invitationError.code); throw new Error("INVITATION_LOOKUP_UNAVAILABLE"); }
+        if (!invitation) throw new Error("UNVERIFIED");
         const { data: registration, error: registrationError } = await db.from("event_registrations")
           .select("person_id,fdi_id").eq("id", invitation.registration_id).maybeSingle();
-        if (registrationError || !registration) throw new Error("UNVERIFIED");
+        if (registrationError) { console.error("Registration lookup failed", registrationError.code); throw new Error("INVITATION_LOOKUP_UNAVAILABLE"); }
+        if (!registration) throw new Error("UNVERIFIED");
         // select * keeps compatibility with databases predating public_id.
         const { data: person, error: personError } = await db.from("people")
           .select("*").eq("id", registration.person_id).maybeSingle();
-        if (personError || !person || normalizeName(b.name) !== normalizeName(person.full_name) ||
+        if (personError) { console.error("Person lookup failed", personError.code); throw new Error("INVITATION_LOOKUP_UNAVAILABLE"); }
+        if (!person || normalizeName(b.name) !== normalizeName(person.full_name) ||
           ![person.public_id, registration.fdi_id].some(value =>
             typeof value === "string" && normalizeId(value) === normalizeId(b.fdi_id)))
           throw new Error("UNVERIFIED");
@@ -625,6 +628,8 @@ export async function handle(request: Request, env: Env): Promise<Response> {
         { error: "Too many attempts. Please wait and try again." },
         429,
       );
+    if (msg === "INVITATION_LOOKUP_UNAVAILABLE")
+      return json({ error: "Invitation verification is temporarily unavailable. Please contact FDI.", code: "INVITATION_LOOKUP_UNAVAILABLE" }, 503);
     if (msg.includes("UNVERIFIED"))
       return json(
         { error: "We couldn’t verify these invitation details." },

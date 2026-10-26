@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { normalizeName, normalizeId } from "./invitation-identity";
 import { adminSchema, validateAdmin, identifierSchema } from "./validation";
 export interface Env {
   SUPABASE_URL: string;
@@ -185,11 +186,37 @@ export async function handle(request: Request, env: Env): Promise<Response> {
           })
           .parse(await body());
         const newSession = randomToken();
-        const data = await pub("unlock", {
-          ...b,
+        // Resolve only the supplied private token. No person lookup or private
+        // fields are returned before both identity inputs match.
+        const { data: invitation, error: invitationError } = await db.from("invitations")
+          .select("registration_id").eq("token_hash", token_hash).maybeSingle();
+        if (invitationError || !invitation) throw new Error("UNVERIFIED");
+        const { data: registration, error: registrationError } = await db.from("event_registrations")
+          .select("person_id,fdi_id").eq("id", invitation.registration_id).maybeSingle();
+        if (registrationError || !registration) throw new Error("UNVERIFIED");
+        // select * keeps compatibility with databases predating public_id.
+        const { data: person, error: personError } = await db.from("people")
+          .select("*").eq("id", registration.person_id).maybeSingle();
+        if (personError || !person || normalizeName(b.name) !== normalizeName(person.full_name) ||
+          ![person.public_id, registration.fdi_id].some(value =>
+            typeof value === "string" && normalizeId(value) === normalizeId(b.fdi_id)))
+          throw new Error("UNVERIFIED");
+        const unlockPayload = {
+          name: person.full_name,
+          fdi_id: person.public_id || registration.fdi_id,
           token_hash,
           session_hash: await hash(newSession),
-        });
+        };
+        let data;
+        try {
+          data = await pub("unlock", unlockPayload);
+        } catch (error) {
+          // Older deployed SQL checks the event ID, while upgraded SQL checks
+          // the reusable person ID. Both still enforce status and expiration.
+          if (!(error instanceof Error) || !error.message.includes("UNVERIFIED") ||
+            unlockPayload.fdi_id === registration.fdi_id) throw error;
+          data = await pub("unlock", { ...unlockPayload, fdi_id: registration.fdi_id });
+        }
         extra["Set-Cookie"] =
           `fdi_invite=${newSession}; HttpOnly; ${u.protocol === "https:" ? "Secure; " : ""}SameSite=Strict; Path=/api/invitation; Max-Age=7200`;
         return json(data);
@@ -678,3 +705,4 @@ export async function handle(request: Request, env: Env): Promise<Response> {
   }
 }
 export default { fetch: handle };
+

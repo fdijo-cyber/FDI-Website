@@ -168,6 +168,12 @@ export async function harness() {
         [row.actor, row.target_id, row.action, JSON.stringify(row.metadata)],
       );
       data = {};
+    } else if (request.method === "GET" && ["/rest/v1/invitations", "/rest/v1/event_registrations", "/rest/v1/people"].includes(u.pathname)) {
+      const table = u.pathname.split("/").pop()!;
+      const key = table === "invitations" ? "token_hash" : "id";
+      const value = u.searchParams.get(key)?.replace(/^eq\./, "");
+      const result = await db.query(`select * from ${table} where ${key}=$1`, [value]);
+      data = result.rows[0] ?? null;
     } else if (u.pathname.startsWith("/rest/v1/rpc/")) {
       const fn = u.pathname.split("/").pop()!;
       const args = (await request.json()) as any;
@@ -217,3 +223,4 @@ export async function harness() {
     },
   };
 }
+

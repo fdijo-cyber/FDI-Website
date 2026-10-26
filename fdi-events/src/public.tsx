@@ -99,8 +99,8 @@ export function PublicInvitation({ token }: { token: string }) {
         <h1>{meta.name}</h1>
         <p className="lead">Access your invitation</p>
         <p className="muted">
-          Enter your name and FDI ID exactly as provided in your invitation
-          message.
+          Enter the full name and FDI ID shown in your invitation message.
+          The # prefix is optional.
         </p>
         <form onSubmit={unlock} className="access-form">
           <Field
@@ -413,3 +413,4 @@ export function PublicEvent({ id }: { id: string }) {
     </main>
   );
 }
+

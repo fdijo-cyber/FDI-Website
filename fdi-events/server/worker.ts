@@ -66,7 +66,7 @@ export async function handle(request: Request, env: Env): Promise<Response> {
       !env.RATE_LIMIT_SECRET
     )
       return json(
-        { error: "The platform is awaiting secure database configuration." },
+        { error: "The platform is awaiting secure database configuration.", missing: ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_ANON_KEY", "RATE_LIMIT_SECRET"].filter(key => !env[key as keyof Env]) },
         503,
       );
     if (

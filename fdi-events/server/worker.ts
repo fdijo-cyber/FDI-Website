@@ -162,7 +162,7 @@ export async function handle(request: Request, env: Env): Promise<Response> {
         }),
       );
     }
-    if (u.pathname.startsWith("/api/invitation")) {
+    if (u.pathname === "/api/invitation" || u.pathname.startsWith("/api/invitation/")) {
       const tok = tokenSchema.parse(u.searchParams.get("token"));
       const token_hash = await hash(tok);
       if (u.pathname === "/api/invitation/meta" && request.method === "GET") {
@@ -345,6 +345,44 @@ export async function handle(request: Request, env: Env): Promise<Response> {
       action: "bootstrap",
       payload: {},
     });
+    if (u.pathname === "/api/invitation-diagnostic" && request.method === "POST") {
+      const b = z.object({ event_id: z.uuid(), registration_id: z.uuid() }).parse(await body());
+      // Reuse database authorization: check-in staff cannot retrieve attendee_detail.
+      const attendee = await rpc("fdi_admin", { actor, action: "attendee_detail", payload: b });
+      const event = bootstrap.events.find((e: any) => e.id === b.event_id);
+      if (!event) throw new Error("FORBIDDEN");
+      await rate("invitation-diagnostic:" + actor, 30, 60);
+      const issues: string[] = [];
+      const { data: invitation, error } = await db.from("invitations").select("*")
+        .eq("registration_id", b.registration_id).maybeSingle();
+      if (error) throw new Error("INVITATION_LOOKUP_UNAVAILABLE");
+      if (!invitation) issues.push("No invitation is linked to this registration.");
+      else {
+        if (invitation.status === "REVOKED") issues.push("Invitation is revoked. Reactivate it only if access should be restored.");
+        if (invitation.status === "DRAFT") issues.push("Invitation is still a draft.");
+        if (!event.keep_invitation_record && event.invitation_expires_at && Date.parse(event.invitation_expires_at) <= Date.now())
+          issues.push("Invitation access expired. Review the event expiration and keep-record settings.");
+        if (await hash(invitation.token) !== invitation.token_hash)
+          issues.push("The stored invitation token and its verification hash do not match. Contact FDI technical support before replacing links.");
+        if (!issues.length) {
+          const probeHash = await hash(randomToken());
+          try {
+            await pub("unlock", { name: attendee.name, fdi_id: attendee.fdi_id,
+              token_hash: invitation.token_hash, session_hash: probeHash });
+          } catch (e) {
+            issues.push(e instanceof Error && e.message.includes("UNVERIFIED")
+              ? "Database rejected the saved name and ID. Check database migration 003 and the saved reusable person ID versus event ID."
+              : "The database could not complete invitation verification. Check Supabase database logs.");
+          } finally {
+            const cleanup = await db.from("invitation_sessions").delete().eq("session_hash", probeHash);
+            if (cleanup.error) console.error("Invitation diagnostic session cleanup failed", cleanup.error.code);
+          }
+        }
+      }
+      return json({ ok: issues.length === 0, name: attendee.name, fdi_id: attendee.fdi_id,
+        rsvp: attendee.rsvp, issues,
+        message: issues.length ? issues.join(" ") : "Saved name, ID and current link passed database verification. RSVP " + attendee.rsvp + " does not prevent opening the invitation. Compare the emailed name, ID and link with this saved record." });
+    }
     if (u.pathname === "/api/media" && request.method === "POST") {
       const eid = z.uuid().parse(u.searchParams.get("event"));
       if (

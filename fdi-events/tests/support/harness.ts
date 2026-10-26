@@ -170,10 +170,13 @@ export async function harness() {
       data = {};
     } else if (request.method === "GET" && ["/rest/v1/invitations", "/rest/v1/event_registrations", "/rest/v1/people"].includes(u.pathname)) {
       const table = u.pathname.split("/").pop()!;
-      const key = table === "invitations" ? "token_hash" : "id";
+      const key = table === "invitations" ? (u.searchParams.has("registration_id") ? "registration_id" : "token_hash") : "id";
       const value = u.searchParams.get(key)?.replace(/^eq\./, "");
       const result = await db.query(`select * from ${table} where ${key}=$1`, [value]);
       data = result.rows[0] ?? null;
+    } else if (u.pathname === "/rest/v1/invitation_sessions" && request.method === "DELETE") {
+      await db.query("delete from invitation_sessions where session_hash=$1", [u.searchParams.get("session_hash")?.replace(/^eq\./, "")]);
+      return new Response(null, {status: 204});
     } else if (u.pathname.startsWith("/rest/v1/rpc/")) {
       const fn = u.pathname.split("/").pop()!;
       const args = (await request.json()) as any;

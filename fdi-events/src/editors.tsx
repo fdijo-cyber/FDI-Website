@@ -370,6 +370,21 @@ export function PersonEditor({
             <div className="actions">
               <button
                 className="secondary"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true); setError(""); setMessage("");
+                  try {
+                    const result = await api<{ok: boolean; name: string; fdi_id: string; message: string}>("/invitation-diagnostic", {event_id: event.id, registration_id: a.id}, true);
+                    const text = `Saved name: ${result.name} · Saved ID: ${result.fdi_id}. ${result.message}`;
+                    if (result.ok) setMessage(text); else setError(text);
+                  } catch (e) { setError((e as Error).message); }
+                  finally { setBusy(false); }
+                }}
+              >
+                Check invitation access
+              </button>
+              <button
+                className="secondary"
                 onClick={() => deliver("LINK", "link")}
                 disabled={!a.invitation_token}
               >
@@ -1816,3 +1831,4 @@ export function RoleSettings({
 export function AccountSecurity() {
   return <Authenticator onVerified={() => location.reload()} />;
 }
+

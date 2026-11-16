@@ -32,10 +32,12 @@ a:hover,a:focus-visible{text-decoration:underline}
 .section-banner h1,.section-banner h2{font-size:22px}
 .section-banner img{width:36px}
 .media-intro{max-width:1012px;margin-inline:auto;padding:24px 16px 0;display:grid;grid-template-columns:1fr 1.38fr;gap:32px;align-items:center}
-.media-intro>p{font-size:17px;line-height:1.32}
+.media-copy{background:#d1dcf2;border:1px solid #aebedb;border-radius:16px;padding:20px;display:flex;flex-direction:column;justify-content:center;gap:12px;align-self:stretch}
+.media-copy h2{font-size:21px}
+.media-copy p{font-size:16px;line-height:1.5}
 .video-card{background:#c9d0e8;border-radius:24px;padding:16px}
 .video-card h2,.video-card h3{font-size:18px;font-weight:500;margin:16px 0 10px}
-.podcasts{max-width:1012px;margin-inline:auto;padding:28px 16px 40px;display:grid;gap:28px}
+.podcasts{max-width:1012px;margin-inline:auto;padding:16px 16px 32px;display:grid;gap:20px}
 .episode{display:flex;align-items:flex-start;gap:14px}
 .episode-icon{width:28px;height:28px;flex:none;fill:none;stroke:var(--muted);stroke-width:1.7;stroke-linejoin:round}
 .status{display:block;margin-top:12px;color:var(--muted);font-size:14px}

@@ -56,3 +56,7 @@ a:hover,a:focus-visible{text-decoration:underline}
 .footer-socials a{display:grid;place-items:center;width:40px;height:40px}
 .footer-socials svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .episode h3{font-size:18px}
+
+html { background: #f8f7f4; overscroll-behavior-y: none; }
+body { min-height: 100vh; }
+.masthead { position: static; }

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Editorial Dashboard | Future Doctor Initiative</title>
+  <link rel="icon" href="images/fdi-editorial.png">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=Inter:wght@400;600&display=swap">
+  <link rel="stylesheet" href="editorial.css?v=dashboard-1">
+  <link rel="stylesheet" href="dashboard.css">
+  <script type="module" src="dashboard.js"></script>
+</head>
+<body>
+<header class="masthead">
+  <a class="brand" href="editorial.html"><img src="images/fdi-editorial.png" alt="Future Doctor Initiative"><span>Future Doctor Initiative Media &amp; Newsletter</span></a>
+  <nav aria-label="Editorial navigation"><a href="editorial.html">HOME</a><a href="media.html">MEDIA</a><a href="newsletter.html">NEWSLETTER</a></nav>
+</header>
+<main class="desk">
+  <h1>Editorial Dashboard</h1>
+  <p id="notice" role="status" aria-live="polite"></p>
+  <section class="desk-card" id="account" hidden>
+    <h2 id="account-heading">Team sign-in</h2>
+    <form id="credentials">
+      <label>Email <input name="email" type="email" autocomplete="username" required></label>
+      <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+      <button id="auth-action">Sign in</button>
+    </form>
+    <button class="secondary" id="switch-auth" type="button">I have an invitation</button>
+    <label id="code-label" hidden>Invitation code <input form="credentials" name="code" id="code" autocomplete="off" disabled></label>
+  </section>
+  <section id="workspace" hidden>
+    <div class="desk-toolbar"><p id="identity"></p><button class="secondary" id="sign-out">Sign out</button></div>
+    <section class="desk-card" id="invitations" hidden>
+      <h2>Invite a team member</h2>
+      <form id="invite-form">
+        <label>Approved email <input name="email" type="email" required></label>
+        <label>Role <select name="role"><option value="writer">Writer</option><option value="editor">Editor</option></select></label>
+        <button>Create invitation</button>
+      </form>
+      <div id="invitation-result" hidden>
+        <label>Link to send <input id="invite-link" readonly></label>
+        <button id="copy-link" type="button" class="secondary">Copy link</button>
+      </div>
+    </section>
+    <section class="desk-card">
+      <h2>Article drafts</h2>
+      <div id="articles"></div>
+    </section>
+    <section class="desk-card" id="draft-card">
+      <h2 id="draft-heading">New article</h2>
+      <form id="article-form">
+        <label>Title <input name="title" maxlength="160" required></label>
+        <label>Article <textarea name="body" rows="8" maxlength="50000" required></textarea></label>
+        <div class="desk-toolbar"><button>Save article</button><button type="button" class="secondary" id="new-article" hidden>New article</button></div>
+      </form>
+    </section>
+  </section>
+</main>
+<footer class="desk-footer"><a href="index.html">Future Doctor Initiative</a> · <a href="mailto:info@futuredoctorinitiative.org">Contact FDI</a></footer>
+</body>
+</html>

@@ -1,0 +1,19 @@
+.desk { max-width: 980px; margin: 24px auto; padding: 0 16px; }
+.desk h1 { font-size: 26px; }
+.desk h2 { font-size: 20px; margin-bottom: 12px; }
+.desk-card { background: #f8f7f4; border: 1px solid #aebedb; border-radius: 14px; padding: 18px; margin: 16px 0; }
+.desk form, #invitation-result { display: grid; gap: 12px; }
+.desk [hidden] { display: none !important; }
+.desk label { display: grid; gap: 5px; }
+.desk input, .desk textarea, .desk select { width: 100%; min-width: 0; padding: 9px; border: 1px solid #758ba9; border-radius: 6px; font: 16px Inter, sans-serif; }
+.desk textarea { resize: vertical; }
+.desk button { justify-self: start; min-height: 40px; padding: 8px 14px; border: 1px solid var(--ink); border-radius: 6px; background: var(--ink); color: white; font: 600 14px Inter, sans-serif; cursor: pointer; }
+.desk button.secondary { background: transparent; color: var(--ink); }
+.desk button:disabled { opacity: .65; cursor: wait; }
+.desk-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.desk-article { padding: 12px 0; border-top: 1px solid #aebedb; }
+.desk-article h3 { font-size: 17px; }
+.desk-article p { margin: 4px 0 8px; }
+.desk-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+#notice:not(:empty), #switch-auth, #invitation-result { margin-top: 12px; }
+.desk-footer { padding: 20px 16px; text-align: center; background: #fcfcfc; }

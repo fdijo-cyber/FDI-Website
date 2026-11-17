@@ -14,6 +14,71 @@ let editingId;
 let registration = false;
 let sessionVersion = 0;
 
+const panels = [...document.querySelectorAll('[data-panel]')];
+function showPanel(id) {
+  for (const button of panels) {
+    field(button.dataset.panel).hidden = button.dataset.panel !== id || button.hidden;
+    button.setAttribute('aria-pressed', String(button.dataset.panel === id));
+  }
+}
+
+for (const button of panels) {
+  button.addEventListener('click', () => run(button, async () => {
+    showPanel(button.dataset.panel);
+    if (button.dataset.panel === 'media-panel') await loadMedia();
+    if (button.dataset.panel === 'invitations') await loadTeam();
+  }));
+}
+
+async function loadTeam() {
+  const { data, error } = await client.from('editorial_members').select('email,role').order('email');
+  if (error) throw error;
+  field('team-access').replaceChildren(...data.map(person => {
+    const item = document.createElement('li');
+    item.textContent = `${person.email} · ${roles[person.role]}`;
+    return item;
+  }));
+}
+
+async function loadMedia() {
+  const { data, error } = await client.from('editorial_media').select('id,title,kind')
+    .order('published_at', { ascending: false });
+  if (error) throw new Error('Media publishing needs the media-and-access.sql migration in Supabase.');
+  field('published-media').replaceChildren(...data.map(item => {
+    const row = document.createElement('article');
+    const title = document.createElement('h3');
+    row.className = 'desk-article';
+    title.textContent = item.title;
+    row.append(title, action('Unpublish', async () => {
+      if (!window.confirm(`Remove “${item.title}” from the public Media page?`)) return;
+      const { data, error } = await client.from('editorial_media').delete().eq('id', item.id).select('id');
+      if (error) throw error;
+      if (!data.length) throw new Error('This item is no longer available.');
+      await loadMedia();
+    }));
+    return row;
+  }));
+}
+
+field('media-form').addEventListener('submit', event => {
+  event.preventDefault();
+  void run(event.submitter, async () => {
+    const form = event.target;
+    const values = new FormData(form);
+    const url = new URL(values.get('url'));
+    if (url.protocol !== 'https:' || url.username || url.password) {
+      throw new Error('Enter a public HTTPS link.');
+    }
+    const { error } = await client.from('editorial_media').insert({
+      title: values.get('title').trim(), kind: values.get('kind'), url: url.href,
+    });
+    if (error) throw error;
+    form.reset();
+    await loadMedia();
+    notice('Published to the public Media page.');
+  });
+});
+
 function showRegistration(enabled) {
   registration = enabled;
   field('code-label').hidden = !enabled;
@@ -85,6 +150,7 @@ async function listArticles() {
     status.textContent = { draft: 'Draft', submitted: 'In review', approved: 'Approved' }[article.status];
     if (canReview || article.status === 'draft') {
       actions.append(action('Edit', () => {
+        showPanel('writer-panel');
         editArticle(article);
         articleForm.elements.title.focus();
       }));
@@ -125,7 +191,9 @@ async function showSession(session) {
   }
   member = data;
   field('identity').textContent = `${data.email} · ${roles[data.role]}`;
-  field('invitations').hidden = data.role !== 'super_admin';
+  panels.find(button => button.dataset.panel === 'invitations').hidden = data.role !== 'super_admin';
+  panels.find(button => button.dataset.panel === 'media-panel').hidden = data.role === 'writer';
+  showPanel('editorial-panel');
   field('workspace').hidden = false;
   await listArticles();
 }

@@ -30,7 +30,15 @@
   </section>
   <section id="workspace" hidden>
     <div class="desk-toolbar"><p id="identity"></p><button class="secondary" id="sign-out">Sign out</button></div>
+    <nav class="desk-actions" aria-label="Dashboard sections">
+      <button type="button" data-panel="editorial-panel">Editorial Dashboard</button>
+      <button type="button" data-panel="writer-panel">Writer Dashboard</button>
+      <button type="button" data-panel="invitations" hidden>Access and Emails</button>
+      <button type="button" data-panel="media-panel" hidden>Podcasts and Media</button>
+    </nav>
     <section class="desk-card" id="invitations" hidden>
+      <h2>Access and Emails</h2>
+      <ul id="team-access"></ul>
       <h2>Invite a team member</h2>
       <form id="invite-form">
         <label>Approved email <input name="email" type="email" required></label>
@@ -42,17 +50,27 @@
         <button id="copy-link" type="button" class="secondary">Copy link</button>
       </div>
     </section>
-    <section class="desk-card">
+    <section class="desk-card" id="editorial-panel">
       <h2>Article drafts</h2>
       <div id="articles"></div>
     </section>
-    <section class="desk-card" id="draft-card">
+    <section class="desk-card" id="writer-panel" hidden>
       <h2 id="draft-heading">New article</h2>
       <form id="article-form">
         <label>Title <input name="title" maxlength="160" required></label>
         <label>Article <textarea name="body" rows="8" maxlength="50000" required></textarea></label>
         <div class="desk-toolbar"><button>Save article</button><button type="button" class="secondary" id="new-article" hidden>New article</button></div>
       </form>
+    </section>
+    <section class="desk-card" id="media-panel" hidden>
+      <h2>Podcasts and Media</h2>
+      <form id="media-form">
+        <label>Title <input name="title" maxlength="160" required></label>
+        <label>Type <select name="kind"><option value="video">Video</option><option value="podcast">Podcast</option></select></label>
+        <label>Public HTTPS link <input type="url" name="url" maxlength="2048" required></label>
+        <button>Publish to Media page</button>
+      </form>
+      <div id="published-media"></div>
     </section>
   </section>
 </main>

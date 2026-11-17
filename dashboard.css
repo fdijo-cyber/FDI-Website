@@ -17,3 +17,5 @@
 .desk-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 #notice:not(:empty), #switch-auth, #invitation-result { margin-top: 12px; }
 .desk-footer { padding: 20px 16px; text-align: center; background: #fcfcfc; }
+.desk-actions { margin-block: 12px; }
+.desk-actions button[aria-pressed="false"] { background: transparent; color: var(--ink); }

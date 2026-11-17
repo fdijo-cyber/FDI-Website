@@ -7,8 +7,9 @@
   <link rel="icon" href="images/fdi-editorial.png">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=Inter:wght@400;600&display=swap">
   <link rel="stylesheet" href="editorial.css?v=dashboard-1">
-  <link rel="stylesheet" href="dashboard.css?v=studio-4">
-  <script type="module" src="dashboard.js?v=studio-4"></script>
+  <link rel="stylesheet" href="publication.css?v=credits">
+  <link rel="stylesheet" href="dashboard.css?v=studio-5">
+  <script type="module" src="dashboard.js?v=studio-5"></script>
 </head>
 <body>
 <header class="masthead">
@@ -89,12 +90,22 @@
       <h2 id="draft-heading">New article</h2>
       <form id="article-form">
         <label>Title <input name="title" maxlength="160" required></label>
+        <div class="studio-split">
+          <label>Category (one word) <input name="category" maxlength="30" list="article-categories"></label>
+          <label>Author name <input name="byline_name" maxlength="120"></label>
+        </div>
+        <datalist id="article-categories"><option value="Medical"><option value="Prevention"><option value="Political"><option value="Humanitarian"><option value="Experiential"><option value="Research"><option value="Opinion"></datalist>
+        <label>Editor names <input name="editor_names" maxlength="240" placeholder="Separate multiple names with commas"></label>
+        <label>Subtitle <input name="subtitle" maxlength="300"></label>
         <label>Cover photo <input name="cover" type="file" accept="image/jpeg,image/png,image/webp"></label>
         <p id="cover-status"></p>
         <label>Article <textarea name="body" rows="8" maxlength="50000" required></textarea></label>
+        <div class="desk-actions"><button type="button" class="secondary" id="insert-article-link">Insert inline link</button></div>
+        <label>Bibliography <textarea name="bibliography" rows="4" maxlength="12000" aria-describedby="bibliography-help"></textarea></label>
+        <p id="bibliography-help">One source per line. Use “Source title | https://…” for a linked entry. Type [1], [2], and so on in the article to link to those entries.</p>
         <div class="desk-toolbar"><button>Save article</button><button name="review" value="submit" id="save-submit">Save and submit for review</button><button type="button" class="secondary" id="preview-article">Preview</button><button type="button" class="secondary" id="new-article" hidden>New article</button></div>
       </form>
-      <dialog id="article-preview"><article><h2 id="preview-title"></h2><p id="preview-body"></p></article><form method="dialog"><button>Close preview</button></form></dialog>
+      <dialog id="article-preview"><article><p id="preview-category" class="publication-category"></p><h2 id="preview-title"></h2><p id="preview-subtitle"></p><p id="preview-credits"></p><p id="preview-body"></p><section id="preview-bibliography"></section></article><form method="dialog"><button>Close preview</button></form></dialog>
     </section>
     <section class="desk-card" id="homepage-panel" hidden>
       <h2>Homepage</h2>

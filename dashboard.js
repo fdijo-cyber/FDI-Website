@@ -1,3 +1,4 @@
+import { articleText, renderBibliography, renderCredits, safeSource, sourceLines } from './article-format.js';
 import { editorialConfig } from './editorial-config.js';
 
 const field = id => document.getElementById(id);
@@ -37,9 +38,36 @@ for (const button of statusButtons) {
     renderArticles();
   });
 }
+const articleCreditFields = ['category', 'subtitle', 'byline_name', 'editor_names', 'bibliography'];
+
+field('insert-article-link').addEventListener('click', () => {
+  const body = articleForm.elements.body;
+  const start = body.selectionStart;
+  const end = body.selectionEnd;
+  const selected = body.value.slice(start, end);
+  const label = selected || window.prompt('Text to display for this link');
+  if (!label?.trim()) return;
+  if (/[\]\r\n]/.test(label)) {
+    notice('Use a single line without closing brackets for the link text.');
+    return;
+  }
+  const address = window.prompt('Paste the source URL');
+  if (!address) return;
+  const url = safeSource(address.trim());
+  if (!url) { notice('Enter a valid web address starting with https:// or http://.'); return; }
+  body.setRangeText(`[${label}](${url.replaceAll(')', '%29')})`, start, end, 'end');
+  body.focus();
+});
+
 field('preview-article').addEventListener('click', () => {
-  field('preview-title').textContent = articleForm.elements.title.value.trim() || 'Untitled article';
-  field('preview-body').textContent = articleForm.elements.body.value;
+  const data = new FormData(articleForm);
+  const sources = sourceLines(data.get('bibliography'));
+  field('preview-title').textContent = data.get('title').trim() || 'Untitled article';
+  field('preview-category').textContent = data.get('category').trim();
+  field('preview-subtitle').textContent = data.get('subtitle').trim();
+  renderCredits(field('preview-credits'), Object.fromEntries(data));
+  articleText(field('preview-body'), data.get('body'), sources.length);
+  renderBibliography(field('preview-bibliography'), sources);
   field('article-preview').showModal();
 });
 
@@ -124,7 +152,7 @@ async function renderReviewComments(articleId) {
 async function openReview(article) {
   reviewingArticle = article;
   field('review-title').textContent = article.title;
-  field('review-body').textContent = article.body;
+  articleText(field('review-body'), article.body);
   field('review-comments').replaceChildren();
   field('review-notice').textContent = '';
   const cover = field('review-cover');
@@ -304,6 +332,7 @@ function editArticle(article) {
   field('save-submit').hidden = Boolean(article && (article.status !== 'draft' || article.author_id !== member?.id));
   articleForm.elements.title.value = article?.title ?? '';
   articleForm.elements.body.value = article?.body ?? '';
+  for (const name of articleCreditFields) articleForm.elements[name].value = article?.[name] ?? '';
   field('draft-heading').textContent = article ? 'Edit article' : 'New article';
   field('new-article').hidden = !article;
 }
@@ -523,6 +552,13 @@ async function start() {
       const data = new FormData(articleForm);
       const values = { title: data.get('title').trim(), body: data.get('body').trim() };
       if (!values.title || !values.body) throw new Error('Enter a title and article text.');
+      const category = data.get('category').trim();
+      if (category && !/^\p{L}{1,30}$/u.test(category)) throw new Error('Use one word for the category.');
+      const original = articleRows.find(article => article.id === editingId);
+      for (const name of articleCreditFields) {
+        const value = data.get(name).trim() || null;
+        if (value !== (original?.[name] ?? null)) values[name] = value;
+      }
       const coverFile = data.get('cover');
       if (coverFile.size) values.cover_path = await uploadFile('editorial-covers', coverFile, coverTypes, 5 * 1024 * 1024);
       const articles = client.from('editorial_articles');
@@ -531,6 +567,9 @@ async function start() {
         : await articles.insert(values).select('id');
       if (error || !saved.length) {
         if (values.cover_path && (!error || error.code)) await client.storage.from('editorial-covers').remove([values.cover_path]);
+        if (error?.code === 'PGRST204' && articleCreditFields.some(name => name in values)) {
+          throw new Error('Run article-credits.sql in Supabase to save article credits and sources.');
+        }
         throw error || new Error('This article is no longer editable.');
       }
       if (event.submitter.value === 'submit') {

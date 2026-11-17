@@ -12,3 +12,13 @@
 .publication-home .story h3 { margin: 8px 0 4px; }
 .publication-home .byline { font-size: 13px; color: #526788; }
 .publication-home .video-player { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; }
+.publication-category { font: 600 12px/1.4 Inter, sans-serif; color: #164b80; text-transform: uppercase; letter-spacing: .09em; margin: 0 0 8px; }
+.published-article { max-width: 1050px; border-color: #d7e0ef; background: #fff; padding: clamp(16px, 3vw, 36px); }
+.publication-heading h1 { margin: 0 0 10px; font-size: clamp(25px, 4vw, 42px); }
+.publication-subtitle { max-width: 75ch; font-size: clamp(16px, 2vw, 20px); color: #526788; }
+.publication-credits { margin: 14px 0 8px; font: 400 14px/1.5 Inter, sans-serif; }
+.publication-heading .byline { margin: 8px 0 16px; font: 400 13px/1.5 Inter, sans-serif; }
+.published-article img { border-radius: 10px; object-fit: cover; }
+.publication-bibliography { margin-top: 28px; padding-top: 16px; border-top: 1px solid #d7e0ef; overflow-wrap: anywhere; }
+.publication-bibliography li, #preview-bibliography li { margin-bottom: 8px; }
+#bibliography-help { font-size: 13px; color: #526788; }

@@ -1,12 +1,17 @@
+import { articleText, renderBibliography, renderCredits, sourceLines } from './article-format.js';
 import { editorialConfig } from './editorial-config.js';
 
 const headers = { apikey: editorialConfig.publishableKey };
 const date = new Intl.DateTimeFormat('en', { dateStyle: 'medium' });
 
 async function fetchArticles(params) {
-  const url = new URL('/rest/v1/rpc/editorial_public_articles', editorialConfig.url);
+  const url = new URL('/rest/v1/rpc/editorial_article_feed', editorialConfig.url);
   url.search = new URLSearchParams(params);
-  const response = await fetch(url, { headers });
+  let response = await fetch(url, { headers });
+  if (response.status === 404) {
+    url.pathname = '/rest/v1/rpc/editorial_public_articles';
+    response = await fetch(url, { headers });
+  }
   if (!response.ok) throw new Error('The article feed could not load.');
   return response.json();
 }
@@ -43,16 +48,20 @@ function renderCards(rows, container, emptyText) {
     const title = document.createElement('h3');
     const byline = document.createElement('p');
     const excerpt = document.createElement('p');
+    const category = document.createElement('p');
     card.className = 'story publication-card';
     frame.className = 'publication-image';
     link.href = `article.html?id=${encodeURIComponent(entry.id)}`;
     byline.className = 'byline';
     byline.textContent = date.format(new Date(entry.created_at));
     title.textContent = entry.title;
-    excerpt.textContent = entry.body;
+    excerpt.textContent = entry.subtitle || entry.body.replace(/\[([^\]]+)\]\([^)]*\)|\[\d+\]/g, '$1');
+    category.className = 'publication-category';
+    category.textContent = entry.category || '';
+    category.hidden = !entry.category;
     frame.append(image);
     link.append(frame, title);
-    card.append(link, byline, excerpt);
+    card.append(category, link, byline, excerpt);
     return card;
   });
   container.replaceChildren(...cards);
@@ -77,8 +86,28 @@ async function start() {
     byline.className = 'byline';
     byline.textContent = date.format(new Date(entry.created_at));
     body.className = 'publication-body';
-    body.textContent = entry.body;
-    detail.replaceChildren(title, byline, coverImage(entry.cover_path), body);
+    const heading = document.createElement('header');
+    const category = document.createElement('p');
+    const subtitle = document.createElement('p');
+    const credits = document.createElement('p');
+    const bibliography = document.createElement('section');
+    const sources = sourceLines(entry.bibliography);
+    heading.className = 'publication-heading';
+    category.className = 'publication-category';
+    category.textContent = entry.category || '';
+    category.hidden = !entry.category;
+    subtitle.className = 'publication-subtitle';
+    subtitle.textContent = entry.subtitle || '';
+    subtitle.hidden = !entry.subtitle;
+    credits.className = 'publication-credits';
+    bibliography.className = 'publication-bibliography';
+    renderCredits(credits, entry);
+    articleText(body, entry.body, sources.length);
+    const words = body.textContent.trim().split(/\s+/).filter(Boolean).length;
+    byline.textContent += ` · ${Math.max(1, Math.ceil(words / 220))} min read`;
+    renderBibliography(bibliography, sources);
+    heading.append(category, title, subtitle, credits, byline);
+    detail.replaceChildren(heading, coverImage(entry.cover_path), body, bibliography);
     return;
   }
 
@@ -87,7 +116,6 @@ async function start() {
   const search = document.getElementById('publication-search');
   if (!search) {
     const rows = await fetchArticles({
-      select: 'id,title,body,cover_path,created_at,home_position',
       or: '(home_position.is.null,home_position.gt.0)',
       order: 'home_position.asc.nullslast,created_at.desc,id', limit: 6,
     });
@@ -103,7 +131,7 @@ async function start() {
   }
   function renderSearch() {
     const query = search.value.trim().toLowerCase();
-    const visible = rows.filter(entry => `${entry.title} ${entry.body}`.toLowerCase().includes(query));
+    const visible = rows.filter(entry => `${entry.title} ${entry.subtitle ?? ''} ${entry.category ?? ''} ${entry.body}`.toLowerCase().includes(query));
     renderCards(visible, container, query ? 'No articles match your search.' : 'No articles have been published yet.');
   }
   search.addEventListener('input', renderSearch);

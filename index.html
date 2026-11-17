@@ -34,6 +34,7 @@
     name="description"
     content="Future Doctor Initiative is a youth-led initiative providing practical health education, first aid training, workshops, and awareness programs in Jordan."
 >
+<link rel="stylesheet" href="publication.css">
 </head>
 
 <body>
@@ -340,7 +341,17 @@
 
     <!-- ==================== FOOTER ==================== -->
 
-    <footer class="footer">
+    <section class="publication-home" aria-labelledby="publication-heading">
+    <h2 id="publication-heading">Latest Articles &amp; News</h2>
+    <div class="publication-grid" id="publication-feed" aria-live="polite">Loading articles…</div>
+    <p><a href="newsletter.html">View all articles</a></p>
+</section>
+<section class="publication-home" aria-labelledby="homepage-media-heading">
+    <h2 id="homepage-media-heading">Podcasts &amp; Media</h2>
+    <div class="publication-grid" id="media-items" data-homepage aria-live="polite">Loading media…</div>
+    <p><a href="media.html">View all media</a></p>
+</section>
+<footer class="footer">
 
         <div>
 
@@ -523,8 +534,12 @@ aiClose.addEventListener("click", () => {
 			}
 		</script>
 
-	</body>
+	<script type="module" src="public-articles.js"></script>
+<script type="module" src="public-media.js?v=publication"></script>
+</body>
 </html>
+<script type="module" src="public-articles.js"></script>
+<script type="module" src="public-media.js?v=publication"></script>
 </body>
 
 </html>

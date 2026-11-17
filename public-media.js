@@ -4,9 +4,16 @@ async function showMedia() {
   if (!editorialConfig.url || !editorialConfig.publishableKey) return;
   const endpoint = new URL('/rest/v1/editorial_media', editorialConfig.url);
   endpoint.search = new URLSearchParams({ select: 'title,kind,url', order: 'published_at.desc' });
-  const response = await fetch(endpoint, { headers: { apikey: editorialConfig.publishableKey } });
-  if (!response.ok) return;
   const list = document.getElementById('media-items');
+  if (!list) return;
+  if (list.hasAttribute('data-homepage')) {
+    endpoint.searchParams.set('or', '(home_position.is.null,home_position.gt.0)');
+    endpoint.searchParams.set('order', 'home_position.asc.nullslast,published_at.desc,id');
+    endpoint.searchParams.set('limit', '3');
+  }
+  const response = await fetch(endpoint, { headers: { apikey: editorialConfig.publishableKey } });
+  if (!response.ok) throw new Error('The media feed could not load.');
+  list.replaceChildren();
   for (const entry of await response.json()) {
     let url;
     try { url = new URL(entry.url); } catch { continue; }
@@ -43,7 +50,7 @@ async function showMedia() {
     card.append(title, link);
     list.append(card);
   }
-  if (list.childElementCount) document.getElementById('public-media').hidden = false;
+  if (!list.childElementCount) list.textContent = 'No media has been published yet.';
 }
 
-showMedia().catch(error => console.error('Could not load public media', error));
+showMedia().catch(error => { document.getElementById('media-items').textContent = error.message; });

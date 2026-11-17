@@ -55,6 +55,7 @@ for (const button of panels) {
   button.addEventListener('click', () => run(button, async () => {
     showPanel(button.dataset.panel);
     if (button.dataset.panel === 'media-panel') await loadMedia();
+    if (button.dataset.panel === 'homepage-panel') await loadHomepage();
     if (button.dataset.panel === 'invitations') await loadTeam();
   }));
 }
@@ -173,7 +174,7 @@ reviewForm.addEventListener('submit', async event => {
     if (decision !== 'comment') {
       await updateStatus(article, decision);
       reviewDialog.close();
-      notice(decision === 'approved' ? 'Article approved.' : 'Returned to the writer with feedback.');
+      notice(decision === 'approved' ? 'Article approved for the public newsletter.' : 'Returned to the writer with feedback.');
     } else {
       message.textContent = 'Comment posted.';
     }
@@ -183,6 +184,50 @@ reviewForm.addEventListener('submit', async event => {
     buttons.forEach(control => { control.disabled = false; });
   }
 });
+
+async function loadHomepage() {
+  const results = await Promise.all([
+    client.from('editorial_articles').select('id,title,home_position').eq('status', 'approved').order('created_at', { ascending: false }),
+    client.from('editorial_media').select('id,title,home_position').order('published_at', { ascending: false }),
+  ]);
+  for (const [index, table] of ['editorial_articles', 'editorial_media'].entries()) {
+    const container = field(index === 0 ? 'home-articles' : 'home-media');
+    const { data, error } = results[index];
+    container.replaceChildren();
+    if (error) {
+      container.textContent = 'Homepage settings require publication.sql in Supabase.';
+      continue;
+    }
+    if (!data.length) container.textContent = 'Nothing published yet.';
+    for (const item of data) {
+      const form = document.createElement('form');
+      const label = document.createElement('label');
+      const input = document.createElement('input');
+      const button = document.createElement('button');
+      form.className = 'desk-article';
+      input.type = 'number';
+      input.min = '0';
+      input.max = '99';
+      input.value = item.home_position ?? '';
+      input.placeholder = 'Automatic';
+      label.textContent = item.title;
+      label.append(input);
+      button.textContent = 'Save position';
+      form.append(label, button);
+      form.addEventListener('submit', event => {
+        event.preventDefault();
+        void run(button, async () => {
+          const home_position = input.value === '' ? null : input.valueAsNumber;
+          const { data: saved, error } = await client.from(table).update({ home_position }).eq('id', item.id).select('id');
+          if (error) throw error;
+          if (!saved.length) throw new Error('The item is no longer available.');
+          notice('Homepage position saved.');
+        });
+      });
+      container.append(form);
+    }
+  }
+}
 
 async function loadMedia() {
   const { data, error } = await client.from('editorial_media').select('id,title,kind')
@@ -393,6 +438,7 @@ async function showSession(session) {
   field('identity').textContent = `${data.email} · ${roles[data.role]}`;
   panels.find(button => button.dataset.panel === 'invitations').hidden = data.role !== 'super_admin';
   panels.find(button => button.dataset.panel === 'media-panel').hidden = data.role === 'writer';
+  panels.find(button => button.dataset.panel === 'homepage-panel').hidden = data.role === 'writer';
   showPanel('overview-panel');
   field('workspace').hidden = false;
   await listArticles();

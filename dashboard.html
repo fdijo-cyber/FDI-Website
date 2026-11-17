@@ -7,8 +7,8 @@
   <link rel="icon" href="images/fdi-editorial.png">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=Inter:wght@400;600&display=swap">
   <link rel="stylesheet" href="editorial.css?v=dashboard-1">
-  <link rel="stylesheet" href="dashboard.css?v=studio-3">
-  <script type="module" src="dashboard.js?v=studio-3"></script>
+  <link rel="stylesheet" href="dashboard.css?v=studio-4">
+  <script type="module" src="dashboard.js?v=studio-4"></script>
 </head>
 <body>
 <header class="masthead">
@@ -39,6 +39,7 @@
       <button type="button" data-panel="editorial-panel">Articles</button>
       <button type="button" data-panel="writer-panel">Write</button>
       <button type="button" data-panel="invitations" hidden>Access and Emails</button>
+      <button type="button" data-panel="homepage-panel" hidden>Homepage</button>
       <button type="button" data-panel="media-panel" hidden>Podcasts and Media</button>
     </nav>
     <div class="studio-panels">
@@ -94,6 +95,14 @@
         <div class="desk-toolbar"><button>Save article</button><button name="review" value="submit" id="save-submit">Save and submit for review</button><button type="button" class="secondary" id="preview-article">Preview</button><button type="button" class="secondary" id="new-article" hidden>New article</button></div>
       </form>
       <dialog id="article-preview"><article><h2 id="preview-title"></h2><p id="preview-body"></p></article><form method="dialog"><button>Close preview</button></form></dialog>
+    </section>
+    <section class="desk-card" id="homepage-panel" hidden>
+      <h2>Homepage</h2>
+      <p>Set a position from 1 to 99 to feature an item. Enter 0 to hide it from the homepage, or leave the field empty to include it in the latest feed.</p>
+      <div class="studio-split">
+        <section><h3>Approved articles</h3><div id="home-articles"></div></section>
+        <section><h3>Published media</h3><div id="home-media"></div></section>
+      </div>
     </section>
     <section class="desk-card" id="media-panel" hidden>
       <h2>Podcasts and Media</h2>

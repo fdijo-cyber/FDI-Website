@@ -7,8 +7,8 @@
   <link rel="icon" href="images/fdi-editorial.png">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=Inter:wght@400;600&display=swap">
   <link rel="stylesheet" href="editorial.css?v=dashboard-1">
-  <link rel="stylesheet" href="dashboard.css?v=studio-1">
-  <script type="module" src="dashboard.js?v=studio-1"></script>
+  <link rel="stylesheet" href="dashboard.css?v=studio-2">
+  <script type="module" src="dashboard.js?v=studio-2"></script>
 </head>
 <body>
 <header class="masthead">
@@ -35,16 +35,30 @@
     </div>
     <div class="studio-layout">
     <nav class="studio-nav" aria-label="Dashboard sections">
-      <button type="button" data-panel="editorial-panel">Editorial Dashboard</button>
-      <button type="button" data-panel="writer-panel">Writer Dashboard</button>
+      <button type="button" data-panel="overview-panel">Overview</button>
+      <button type="button" data-panel="editorial-panel">Articles</button>
+      <button type="button" data-panel="writer-panel">Write</button>
       <button type="button" data-panel="invitations" hidden>Access and Emails</button>
       <button type="button" data-panel="media-panel" hidden>Podcasts and Media</button>
     </nav>
     <div class="studio-panels">
+    <section id="overview-panel" aria-labelledby="overview-heading">
+      <div class="desk-toolbar"><h2 id="overview-heading">Overview</h2><button id="overview-compose" type="button">New article</button></div>
+      <div class="studio-metrics" aria-label="Article counts">
+        <div><span>Drafts</span><strong id="count-draft">0</strong></div>
+        <div><span>In review</span><strong id="count-submitted">0</strong></div>
+        <div><span>Approved</span><strong id="count-approved">0</strong></div>
+      </div>
+      <div class="desk-card">
+        <div class="desk-toolbar"><h2>Recently created</h2><button type="button" class="secondary" id="view-articles">View all articles</button></div>
+        <div id="recent-articles"></div>
+      </div>
+    </section>
     <section class="desk-card" id="invitations" hidden>
       <h2>Access and Emails</h2>
-      <ul id="team-access"></ul>
-      <h2>Invite a team member</h2>
+      <div class="studio-split">
+      <section><h3>Team members</h3><ul id="team-access" class="team-list"></ul></section>
+      <section><h3>Invite a team member</h3>
       <form id="invite-form">
         <label>Approved email <input name="email" type="email" required></label>
         <label>Role <select name="role"><option value="writer">Writer</option><option value="editor">Editor</option></select></label>
@@ -54,17 +68,19 @@
         <label>Link to send <input id="invite-link" readonly></label>
         <button id="copy-link" type="button" class="secondary">Copy link</button>
       </div>
-    </section>
-    <section class="desk-card" id="editorial-panel">
-      <div class="desk-toolbar"><h2>Articles</h2><button type="button" id="compose">New article</button></div>
-      <div class="studio-metrics" aria-label="Article counts">
-        <div><span>Drafts</span><strong id="count-draft">0</strong></div>
-        <div><span>In review</span><strong id="count-submitted">0</strong></div>
-        <div><span>Approved</span><strong id="count-approved">0</strong></div>
+      </section>
       </div>
+    </section>
+    <section class="desk-card" id="editorial-panel" hidden>
+      <div class="desk-toolbar"><h2>Articles</h2><button type="button" id="compose">New article</button></div>
       <div class="studio-filters">
+        <div class="queue-filters" role="group" aria-label="Filter by status">
+          <button type="button" data-status="" aria-pressed="true">All <span></span></button>
+          <button type="button" data-status="draft" aria-pressed="false">Drafts <span></span></button>
+          <button type="button" data-status="submitted" aria-pressed="false">In review <span></span></button>
+          <button type="button" data-status="approved" aria-pressed="false">Approved <span></span></button>
+        </div>
         <label>Search articles <input id="article-search" type="search" placeholder="Search by title"></label>
-        <label>Status <select id="article-status"><option value="">All statuses</option><option value="draft">Draft</option><option value="submitted">In review</option><option value="approved">Approved</option></select></label>
       </div>
       <div id="articles"></div>
     </section>
@@ -79,13 +95,17 @@
     </section>
     <section class="desk-card" id="media-panel" hidden>
       <h2>Podcasts and Media</h2>
+      <div class="studio-split">
+      <section><h3>Published media</h3><div id="published-media"></div></section>
+      <section><h3>Add media</h3>
       <form id="media-form">
         <label>Title <input name="title" maxlength="160" required></label>
         <label>Type <select name="kind"><option value="video">Video</option><option value="podcast">Podcast</option></select></label>
         <label>Public HTTPS link <input type="url" name="url" maxlength="2048" required></label>
         <button>Publish to Media page</button>
       </form>
-      <div id="published-media"></div>
+      </section>
+      </div>
     </section>
     </div>
     </div>

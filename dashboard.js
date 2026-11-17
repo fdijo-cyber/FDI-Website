@@ -15,13 +15,28 @@ let registration = false;
 let articleRows = [];
 let sessionVersion = 0;
 
-field('compose').addEventListener('click', () => {
-  editArticle();
+const statusLabels = { draft: 'Draft', submitted: 'In review', approved: 'Approved' };
+const statusButtons = [...document.querySelectorAll('[data-status]')];
+const dateFormat = new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', year: 'numeric' });
+let statusFilter = '';
+
+function openComposer(article) {
+  editArticle(article);
   showPanel('writer-panel');
   articleForm.elements.title.focus();
-});
+}
+
+for (const id of ['compose', 'overview-compose']) {
+  field(id).addEventListener('click', () => openComposer());
+}
+field('view-articles').addEventListener('click', () => showPanel('editorial-panel'));
 field('article-search').addEventListener('input', renderArticles);
-field('article-status').addEventListener('change', renderArticles);
+for (const button of statusButtons) {
+  button.addEventListener('click', () => {
+    statusFilter = button.dataset.status;
+    renderArticles();
+  });
+}
 field('preview-article').addEventListener('click', () => {
   field('preview-title').textContent = articleForm.elements.title.value.trim() || 'Untitled article';
   field('preview-body').textContent = articleForm.elements.body.value;
@@ -63,7 +78,9 @@ async function loadMedia() {
     const title = document.createElement('h3');
     row.className = 'desk-article';
     title.textContent = item.title;
-    row.append(title, action('Unpublish', async () => {
+    const kind = document.createElement('p');
+    kind.textContent = item.kind === 'video' ? 'Video' : 'Podcast';
+    row.append(title, kind, action('Unpublish', async () => {
       if (!window.confirm(`Remove “${item.title}” from the public Media page?`)) return;
       const { data, error } = await client.from('editorial_media').delete().eq('id', item.id).select('id');
       if (error) throw error;
@@ -72,6 +89,7 @@ async function loadMedia() {
     }));
     return row;
   }));
+  if (!data.length) field('published-media').textContent = 'No media published yet.';
 }
 
 field('media-form').addEventListener('submit', event => {
@@ -155,12 +173,28 @@ async function listArticles() {
 
 function renderArticles() {
   if (!member) return;
-  const filter = field('article-status').value;
   const search = field('article-search').value.trim().toLowerCase();
   const counts = { draft: 0, submitted: 0, approved: 0 };
   for (const article of articleRows) counts[article.status]++;
   for (const [status, count] of Object.entries(counts)) field(`count-${status}`).textContent = count;
-  const visible = articleRows.filter(article => (!filter || article.status === filter)
+  for (const button of statusButtons) {
+    const { status } = button.dataset;
+    button.setAttribute('aria-pressed', String(status === statusFilter));
+    button.querySelector('span').textContent = status ? counts[status] : articleRows.length;
+  }
+  const recent = field('recent-articles');
+  recent.replaceChildren(...articleRows.slice(0, 5).map(article => {
+    const row = document.createElement('div');
+    const title = document.createElement('strong');
+    const meta = document.createElement('span');
+    row.className = 'recent-row';
+    title.textContent = article.title;
+    meta.textContent = `${statusLabels[article.status]} · ${dateFormat.format(new Date(article.created_at))}`;
+    row.append(title, meta);
+    return row;
+  }));
+  if (!articleRows.length) recent.textContent = 'New articles will appear here.';
+  const visible = articleRows.filter(article => (!statusFilter || article.status === statusFilter)
     && article.title.toLowerCase().includes(search));
   const list = field('articles');
   list.replaceChildren();
@@ -169,19 +203,26 @@ function renderArticles() {
   for (const article of visible) {
     const card = document.createElement('article');
     const title = document.createElement('h3');
-    const status = document.createElement('p');
+    const details = document.createElement('div');
+    const excerpt = document.createElement('p');
+    const meta = document.createElement('div');
+    const date = document.createElement('time');
+    const status = document.createElement('span');
     const actions = document.createElement('div');
     card.className = 'desk-article';
     actions.className = 'desk-actions';
     title.textContent = article.title;
     status.className = `status-pill ${article.status}`;
-    status.textContent = { draft: 'Draft', submitted: 'In review', approved: 'Approved' }[article.status];
+    status.textContent = statusLabels[article.status];
+    meta.className = 'queue-meta';
+    date.dateTime = article.created_at;
+    date.textContent = dateFormat.format(new Date(article.created_at));
+    excerpt.className = 'queue-excerpt';
+    excerpt.textContent = article.body.trim().replace(/\s+/g, ' ').slice(0, 180);
+    details.append(title, excerpt);
+    meta.append(date, status);
     if (canReview || article.status === 'draft') {
-      actions.append(action('Edit', () => {
-        showPanel('writer-panel');
-        editArticle(article);
-        articleForm.elements.title.focus();
-      }));
+      actions.append(action('Edit', () => openComposer(article)));
     }
     if (article.status === 'draft' && article.author_id === member.id) {
       actions.append(action('Submit for review', () => updateStatus(article, 'submitted')));
@@ -192,7 +233,7 @@ function renderArticles() {
     if (canReview && article.status !== 'draft') {
       actions.append(action('Return to draft', () => updateStatus(article, 'draft')));
     }
-    card.append(title, status, actions);
+    card.append(details, meta, actions);
     list.append(card);
   }
 }
@@ -202,7 +243,8 @@ async function showSession(session) {
   member = undefined;
   articleRows = [];
   field('article-search').value = '';
-  field('article-status').value = '';
+  statusFilter = '';
+  field('recent-articles').replaceChildren();
   field('articles').replaceChildren();
   field('workspace').hidden = true;
   field('account').hidden = Boolean(session);
@@ -224,7 +266,7 @@ async function showSession(session) {
   field('identity').textContent = `${data.email} · ${roles[data.role]}`;
   panels.find(button => button.dataset.panel === 'invitations').hidden = data.role !== 'super_admin';
   panels.find(button => button.dataset.panel === 'media-panel').hidden = data.role === 'writer';
-  showPanel('editorial-panel');
+  showPanel('overview-panel');
   field('workspace').hidden = false;
   await listArticles();
 }

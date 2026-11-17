@@ -7,8 +7,8 @@
   <link rel="icon" href="images/fdi-editorial.png">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=Inter:wght@400;600&display=swap">
   <link rel="stylesheet" href="editorial.css?v=dashboard-1">
-  <link rel="stylesheet" href="dashboard.css?v=role-tabs-1">
-  <script type="module" src="dashboard.js?v=role-tabs-1"></script>
+  <link rel="stylesheet" href="dashboard.css?v=studio-1">
+  <script type="module" src="dashboard.js?v=studio-1"></script>
 </head>
 <body>
 <header class="masthead">
@@ -16,7 +16,7 @@
   <nav aria-label="Editorial navigation"><a href="editorial.html">HOME</a><a href="media.html">MEDIA</a><a href="newsletter.html">NEWSLETTER</a></nav>
 </header>
 <main class="desk">
-  <h1>Editorial Dashboard</h1>
+  <div class="desk-heading"><p>Future Doctor Initiative</p><h1>Editorial Studio</h1></div>
   <p id="notice" role="status" aria-live="polite"></p>
   <section class="desk-card" id="account" hidden>
     <h2 id="account-heading">Team sign-in</h2>
@@ -29,13 +29,18 @@
     <label id="code-label" hidden>Invitation code <input form="credentials" name="code" id="code" autocomplete="off" disabled></label>
   </section>
   <section id="workspace" hidden>
-    <div class="desk-toolbar"><p id="identity"></p><button class="secondary" id="sign-out">Sign out</button></div>
-    <nav class="desk-actions" aria-label="Dashboard sections">
+    <div class="studio-account desk-toolbar">
+      <p id="identity"></p>
+      <div class="desk-actions"><a href="newsletter.html">View newsletter</a><button class="secondary" id="sign-out">Sign out</button></div>
+    </div>
+    <div class="studio-layout">
+    <nav class="studio-nav" aria-label="Dashboard sections">
       <button type="button" data-panel="editorial-panel">Editorial Dashboard</button>
       <button type="button" data-panel="writer-panel">Writer Dashboard</button>
       <button type="button" data-panel="invitations" hidden>Access and Emails</button>
       <button type="button" data-panel="media-panel" hidden>Podcasts and Media</button>
     </nav>
+    <div class="studio-panels">
     <section class="desk-card" id="invitations" hidden>
       <h2>Access and Emails</h2>
       <ul id="team-access"></ul>
@@ -51,7 +56,16 @@
       </div>
     </section>
     <section class="desk-card" id="editorial-panel">
-      <h2>Article drafts</h2>
+      <div class="desk-toolbar"><h2>Articles</h2><button type="button" id="compose">New article</button></div>
+      <div class="studio-metrics" aria-label="Article counts">
+        <div><span>Drafts</span><strong id="count-draft">0</strong></div>
+        <div><span>In review</span><strong id="count-submitted">0</strong></div>
+        <div><span>Approved</span><strong id="count-approved">0</strong></div>
+      </div>
+      <div class="studio-filters">
+        <label>Search articles <input id="article-search" type="search" placeholder="Search by title"></label>
+        <label>Status <select id="article-status"><option value="">All statuses</option><option value="draft">Draft</option><option value="submitted">In review</option><option value="approved">Approved</option></select></label>
+      </div>
       <div id="articles"></div>
     </section>
     <section class="desk-card" id="writer-panel" hidden>
@@ -59,8 +73,9 @@
       <form id="article-form">
         <label>Title <input name="title" maxlength="160" required></label>
         <label>Article <textarea name="body" rows="8" maxlength="50000" required></textarea></label>
-        <div class="desk-toolbar"><button>Save article</button><button type="button" class="secondary" id="new-article" hidden>New article</button></div>
+        <div class="desk-toolbar"><button>Save article</button><button type="button" class="secondary" id="preview-article">Preview</button><button type="button" class="secondary" id="new-article" hidden>New article</button></div>
       </form>
+      <dialog id="article-preview"><article><h2 id="preview-title"></h2><p id="preview-body"></p></article><form method="dialog"><button>Close preview</button></form></dialog>
     </section>
     <section class="desk-card" id="media-panel" hidden>
       <h2>Podcasts and Media</h2>
@@ -72,6 +87,8 @@
       </form>
       <div id="published-media"></div>
     </section>
+    </div>
+    </div>
   </section>
 </main>
 <footer class="desk-footer"><a href="index.html">Future Doctor Initiative</a> · <a href="mailto:info@futuredoctorinitiative.org">Contact FDI</a></footer>

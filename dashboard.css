@@ -19,3 +19,36 @@
 .desk-footer { padding: 20px 16px; text-align: center; background: #fcfcfc; }
 .desk-actions { margin-block: 12px; }
 .desk-actions button[aria-pressed="false"] { background: transparent; color: var(--ink); }
+
+body:has(.desk) { background: #edf2fb; }
+.desk { max-width: 1280px; font-family: Inter, sans-serif; }
+.desk-heading { margin: 30px 0 18px; }
+.desk-heading p { font-size: 12px; color: var(--muted); }
+.desk h1 { font: 700 clamp(28px, 4vw, 40px) "Playfair Display", Georgia, serif; }
+.studio-account { border-block: 1px solid #d7e0ef; font-size: 14px; padding: 4px 0; overflow-wrap: anywhere; }
+.studio-account .desk-actions { align-items: center; }
+.studio-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 20px; align-items: start; padding-top: 18px; }
+.studio-nav { display: grid; gap: 4px; background: #f8faff; border: 1px solid #d7e0ef; border-radius: 12px; padding: 8px; }
+.studio-nav button { text-align: left; width: 100%; border-color: transparent; }
+.studio-nav button[aria-pressed="false"] { background: transparent; color: var(--ink); }
+.studio-nav button:hover { border-color: #97acd0; }
+.studio-panels .desk-card { margin-top: 0; }
+.desk-card { background: #fff; border-color: #d7e0ef; }
+#account { max-width: 460px; }
+.studio-metrics, .studio-filters { display: grid; gap: 12px; margin: 16px 0; }
+.studio-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.studio-metrics div { background: #edf2fb; padding: 12px; border-radius: 8px; }
+.studio-metrics span { font-size: 13px; color: var(--muted); }
+.studio-metrics strong { display: block; font-size: 24px; }
+.studio-filters { grid-template-columns: 2fr 1fr; font-size: 14px; }
+.status-pill { display: inline-block; padding: 4px 8px; border-radius: 20px; background: #edf2fb; font-size: 12px; }
+.status-pill.submitted { background: #fff0cc; }
+.status-pill.approved { background: #d8f0e5; }
+#article-preview { width: min(640px, calc(100% - 32px)); border: 1px solid #aebedb; border-radius: 12px; padding: 24px; color: var(--ink); }
+#article-preview::backdrop { background: #061f5066; }
+#preview-body { white-space: pre-wrap; overflow-wrap: anywhere; margin-bottom: 20px; line-height: 1.6; }
+@media(max-width: 720px) {
+  .studio-layout { grid-template-columns: 1fr; gap: 12px; }
+  .studio-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .studio-account .desk-actions { margin-block: 4px; }
+}

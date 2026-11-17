@@ -15,3 +15,7 @@
 6. Open dashboard.html and sign in. Create an invitation for each approved email and send its link yourself. The account holder selects their own password and confirms their email before signing in.
 
 An invitation expires after 72 hours and can be used once. Creating another invitation for the same email invalidates the previous one. Writers work on their own drafts and submit them. Editors and the super admin can edit, approve, and return drafts. Approval is an internal review status. Public publishing is managed separately.
+
+## Invitation diagnostics
+
+For an existing project, run invitation-check.sql in SQL Editor once. Team members should open a fresh invitation from Access and Emails and use the exact invited address. The dashboard then checks the link before signup, including whether it is expired, used, or belongs to a different email. If a valid link still produces a database error, open Supabase Logs Explorer and inspect the Auth and Postgres events at the failed signup time. Supabase dashboard Add user does not carry an invitation code, so it is only used for the original bootstrap before schema.sql installs the trigger.

@@ -12,7 +12,21 @@ let client;
 let member;
 let editingId;
 let registration = false;
+let articleRows = [];
 let sessionVersion = 0;
+
+field('compose').addEventListener('click', () => {
+  editArticle();
+  showPanel('writer-panel');
+  articleForm.elements.title.focus();
+});
+field('article-search').addEventListener('input', renderArticles);
+field('article-status').addEventListener('change', renderArticles);
+field('preview-article').addEventListener('click', () => {
+  field('preview-title').textContent = articleForm.elements.title.value.trim() || 'Untitled article';
+  field('preview-body').textContent = articleForm.elements.body.value;
+  field('article-preview').showModal();
+});
 
 const panels = [...document.querySelectorAll('[data-panel]')];
 function showPanel(id) {
@@ -135,11 +149,24 @@ async function listArticles() {
     .order('created_at', { ascending: false });
   if (version !== sessionVersion || !member) return;
   if (error) throw error;
+  articleRows = data;
+  renderArticles();
+}
+
+function renderArticles() {
+  if (!member) return;
+  const filter = field('article-status').value;
+  const search = field('article-search').value.trim().toLowerCase();
+  const counts = { draft: 0, submitted: 0, approved: 0 };
+  for (const article of articleRows) counts[article.status]++;
+  for (const [status, count] of Object.entries(counts)) field(`count-${status}`).textContent = count;
+  const visible = articleRows.filter(article => (!filter || article.status === filter)
+    && article.title.toLowerCase().includes(search));
   const list = field('articles');
   list.replaceChildren();
-  if (!data.length) list.textContent = 'No drafts yet.';
+  if (!visible.length) list.textContent = articleRows.length ? 'No articles match your filters.' : 'No articles yet. Start with New article.';
   const canReview = member.role !== 'writer';
-  for (const article of data) {
+  for (const article of visible) {
     const card = document.createElement('article');
     const title = document.createElement('h3');
     const status = document.createElement('p');
@@ -147,6 +174,7 @@ async function listArticles() {
     card.className = 'desk-article';
     actions.className = 'desk-actions';
     title.textContent = article.title;
+    status.className = `status-pill ${article.status}`;
     status.textContent = { draft: 'Draft', submitted: 'In review', approved: 'Approved' }[article.status];
     if (canReview || article.status === 'draft') {
       actions.append(action('Edit', () => {
@@ -172,6 +200,9 @@ async function listArticles() {
 async function showSession(session) {
   const version = ++sessionVersion;
   member = undefined;
+  articleRows = [];
+  field('article-search').value = '';
+  field('article-status').value = '';
   field('articles').replaceChildren();
   field('workspace').hidden = true;
   field('account').hidden = Boolean(session);
@@ -226,10 +257,18 @@ async function start() {
       const values = new FormData(credentials);
       const account = { email: values.get('email').trim().toLowerCase(), password: values.get('password') };
       if (registration) {
+        const code = values.get('code').trim();
+        if (!/^[a-f0-9]{48}$/.test(code)) throw new Error('Open the invitation link sent by your FDI administrator.');
+        const check = await client.rpc('editorial_check_invite', { target_email: account.email, invitation_code: code });
+        if (check.error && check.error.code !== 'PGRST202') throw check.error;
+        if (!check.error && !check.data) throw new Error('This invite is expired, used, or belongs to a different email. Use the exact invited email or request a new link.');
         const { error } = await client.auth.signUp({
           ...account,
-          options: { data: { editorial_code: values.get('code').trim() }, emailRedirectTo: dashboardUrl.href },
+          options: { data: { editorial_code: code }, emailRedirectTo: dashboardUrl.href },
         });
+        if (error?.code === 'unexpected_failure' && /database error saving new user/i.test(error.message)) {
+          throw new Error('Supabase could not create this account. Ask your FDI administrator to check Auth and Postgres logs for this signup.');
+        }
         if (error) throw error;
         credentials.reset();
         showRegistration(false);

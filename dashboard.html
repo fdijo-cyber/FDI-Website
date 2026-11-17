@@ -7,8 +7,8 @@
   <link rel="icon" href="images/fdi-editorial.png">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=Inter:wght@400;600&display=swap">
   <link rel="stylesheet" href="editorial.css?v=dashboard-1">
-  <link rel="stylesheet" href="dashboard.css?v=studio-2">
-  <script type="module" src="dashboard.js?v=studio-2"></script>
+  <link rel="stylesheet" href="dashboard.css?v=studio-3">
+  <script type="module" src="dashboard.js?v=studio-3"></script>
 </head>
 <body>
 <header class="masthead">
@@ -88,8 +88,10 @@
       <h2 id="draft-heading">New article</h2>
       <form id="article-form">
         <label>Title <input name="title" maxlength="160" required></label>
+        <label>Cover photo <input name="cover" type="file" accept="image/jpeg,image/png,image/webp"></label>
+        <p id="cover-status"></p>
         <label>Article <textarea name="body" rows="8" maxlength="50000" required></textarea></label>
-        <div class="desk-toolbar"><button>Save article</button><button type="button" class="secondary" id="preview-article">Preview</button><button type="button" class="secondary" id="new-article" hidden>New article</button></div>
+        <div class="desk-toolbar"><button>Save article</button><button name="review" value="submit" id="save-submit">Save and submit for review</button><button type="button" class="secondary" id="preview-article">Preview</button><button type="button" class="secondary" id="new-article" hidden>New article</button></div>
       </form>
       <dialog id="article-preview"><article><h2 id="preview-title"></h2><p id="preview-body"></p></article><form method="dialog"><button>Close preview</button></form></dialog>
     </section>
@@ -101,7 +103,9 @@
       <form id="media-form">
         <label>Title <input name="title" maxlength="160" required></label>
         <label>Type <select name="kind"><option value="video">Video</option><option value="podcast">Podcast</option></select></label>
-        <label>Public HTTPS link <input type="url" name="url" maxlength="2048" required></label>
+        <label>Source <select name="source"><option value="link">External link</option><option value="file">Upload a file</option></select></label>
+        <label id="media-link-label">Public HTTPS link <input type="url" name="url" maxlength="2048" required></label>
+        <label id="media-file-label" hidden>Video or podcast file (up to 50 MB) <input type="file" name="file" disabled></label>
         <button>Publish to Media page</button>
       </form>
       </section>
@@ -109,6 +113,22 @@
     </section>
     </div>
     </div>
+    <dialog id="review-dialog" class="review-dialog">
+      <div class="desk-toolbar"><h2 id="review-title"></h2><form method="dialog"><button class="secondary">Close</button></form></div>
+      <img id="review-cover" alt="Article cover" hidden>
+      <p id="review-body"></p>
+      <h3>Editorial comments</h3>
+      <div id="review-comments"></div>
+      <form id="review-form" hidden>
+        <label>Feedback <textarea name="body" rows="3" maxlength="4000"></textarea></label>
+        <div class="desk-actions">
+          <button name="decision" value="comment">Post comment</button>
+          <button name="decision" value="draft" class="secondary">Request changes</button>
+          <button name="decision" value="approved" class="secondary">Approve article</button>
+        </div>
+      </form>
+      <p id="review-notice" role="status"></p>
+    </dialog>
   </section>
 </main>
 <footer class="desk-footer"><a href="index.html">Future Doctor Initiative</a> · <a href="mailto:info@futuredoctorinitiative.org">Contact FDI</a></footer>

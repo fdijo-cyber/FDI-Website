@@ -69,6 +69,121 @@ async function loadTeam() {
   }));
 }
 
+const mediaForm = field('media-form');
+const reviewForm = field('review-form');
+const reviewDialog = field('review-dialog');
+let reviewingArticle;
+const coverTypes = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+const mediaTypes = {
+  video: { 'video/mp4': 'mp4', 'video/webm': 'webm' },
+  podcast: { 'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/wav': 'wav', 'audio/webm': 'webm', 'audio/ogg': 'ogg' },
+};
+
+async function uploadFile(bucket, file, types, maxSize) {
+  const extension = types[file.type];
+  if (!extension || file.size > maxSize) throw new Error('Choose a supported file within the size limit.');
+  const path = `${member.id}/${crypto.randomUUID()}.${extension}`;
+  const { error } = await client.storage.from(bucket).upload(path, file, { contentType: file.type });
+  if (error) throw error;
+  return path;
+}
+
+function syncMediaSource() {
+  const upload = mediaForm.elements.source.value === 'file';
+  field('media-link-label').hidden = upload;
+  field('media-file-label').hidden = !upload;
+  mediaForm.elements.url.disabled = upload;
+  mediaForm.elements.file.disabled = !upload;
+  mediaForm.elements.file.required = upload;
+  mediaForm.elements.file.accept = Object.keys(mediaTypes[mediaForm.elements.kind.value]).join(',');
+}
+
+mediaForm.elements.source.addEventListener('change', syncMediaSource);
+mediaForm.elements.kind.addEventListener('change', syncMediaSource);
+syncMediaSource();
+
+async function renderReviewComments(articleId) {
+  const { data, error } = await client.from('editorial_comments').select('author_role,body,created_at')
+    .eq('article_id', articleId).order('created_at');
+  if (error) throw error;
+  const list = field('review-comments');
+  list.replaceChildren(...data.map(comment => {
+    const row = document.createElement('article');
+    const detail = document.createElement('strong');
+    const body = document.createElement('p');
+    row.className = 'desk-article';
+    detail.textContent = `${roles[comment.author_role]} · ${dateFormat.format(new Date(comment.created_at))}`;
+    body.textContent = comment.body;
+    row.append(detail, body);
+    return row;
+  }));
+  if (!data.length) list.textContent = 'No feedback yet.';
+}
+
+async function openReview(article) {
+  reviewingArticle = article;
+  field('review-title').textContent = article.title;
+  field('review-body').textContent = article.body;
+  field('review-comments').replaceChildren();
+  field('review-notice').textContent = '';
+  const cover = field('review-cover');
+  cover.hidden = true;
+  cover.removeAttribute('src');
+  reviewForm.reset();
+  reviewForm.hidden = member.role === 'writer';
+  for (const button of reviewForm.querySelectorAll('button')) {
+    button.hidden = button.value !== 'comment' && article.status !== 'submitted';
+  }
+  reviewDialog.showModal();
+  try {
+    await renderReviewComments(article.id);
+    if (article.cover_path) {
+      const { data, error } = await client.storage.from('editorial-covers').createSignedUrl(article.cover_path, 120);
+      if (error) throw error;
+      cover.src = data.signedUrl;
+      cover.hidden = false;
+    }
+  } catch (error) {
+    field('review-notice').textContent = error.message;
+  }
+}
+
+reviewForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const button = event.submitter;
+  const article = reviewingArticle;
+  const decision = button.value;
+  const message = field('review-notice');
+  const body = reviewForm.elements.body.value.trim();
+  if (!body && decision !== 'approved') {
+    message.textContent = 'Enter feedback before continuing.';
+    return;
+  }
+  const buttons = [...reviewForm.querySelectorAll('button')];
+  buttons.forEach(control => { control.disabled = true; });
+  try {
+    if (body) {
+      const { error } = await client.from('editorial_comments').insert({
+        article_id: article.id, author_role: member.role, body,
+      });
+      if (error) throw error;
+      reviewForm.reset();
+      await renderReviewComments(article.id);
+    }
+    if (decision !== 'comment') {
+      await updateStatus(article, decision);
+      reviewDialog.close();
+      notice(decision === 'approved' ? 'Article approved.' : 'Returned to the writer with feedback.');
+    } else {
+      message.textContent = 'Comment posted.';
+    }
+  } catch (error) {
+    message.textContent = error.message;
+  } finally {
+    buttons.forEach(control => { control.disabled = false; });
+  }
+});
+
 async function loadMedia() {
   const { data, error } = await client.from('editorial_media').select('id,title,kind')
     .order('published_at', { ascending: false });
@@ -82,9 +197,13 @@ async function loadMedia() {
     kind.textContent = item.kind === 'video' ? 'Video' : 'Podcast';
     row.append(title, kind, action('Unpublish', async () => {
       if (!window.confirm(`Remove “${item.title}” from the public Media page?`)) return;
-      const { data, error } = await client.from('editorial_media').delete().eq('id', item.id).select('id');
+      const { data, error } = await client.from('editorial_media').delete().eq('id', item.id).select('id,storage_path');
       if (error) throw error;
       if (!data.length) throw new Error('This item is no longer available.');
+      if (data[0].storage_path) {
+        const removal = await client.storage.from('editorial-media').remove([data[0].storage_path]);
+        if (removal.error) notice('Removed from the page, but the uploaded file could not be deleted.');
+      }
       await loadMedia();
     }));
     return row;
@@ -97,15 +216,25 @@ field('media-form').addEventListener('submit', event => {
   void run(event.submitter, async () => {
     const form = event.target;
     const values = new FormData(form);
-    const url = new URL(values.get('url'));
-    if (url.protocol !== 'https:' || url.username || url.password) {
-      throw new Error('Enter a public HTTPS link.');
+    const kind = values.get('kind');
+    const payload = { title: values.get('title').trim(), kind };
+    if (!payload.title) throw new Error('Enter a title.');
+    if (values.get('source') === 'file') {
+      notice('Uploading media…');
+      payload.storage_path = await uploadFile('editorial-media', values.get('file'), mediaTypes[kind], 50 * 1024 * 1024);
+      payload.url = client.storage.from('editorial-media').getPublicUrl(payload.storage_path).data.publicUrl;
+    } else {
+      const url = new URL(values.get('url'));
+      if (url.protocol !== 'https:' || url.username || url.password) throw new Error('Enter a public HTTPS link.');
+      payload.url = url.href;
     }
-    const { error } = await client.from('editorial_media').insert({
-      title: values.get('title').trim(), kind: values.get('kind'), url: url.href,
-    });
-    if (error) throw error;
+    const { error } = await client.from('editorial_media').insert(payload);
+    if (error) {
+      if (payload.storage_path && error.code) await client.storage.from('editorial-media').remove([payload.storage_path]);
+      throw error;
+    }
     form.reset();
+    syncMediaSource();
     await loadMedia();
     notice('Published to the public Media page.');
   });
@@ -125,6 +254,9 @@ function showRegistration(enabled) {
 
 function editArticle(article) {
   editingId = article?.id;
+  articleForm.elements.cover.value = '';
+  field('cover-status').textContent = article?.cover_path ? 'Cover photo attached' : 'JPG, PNG, or WebP, up to 5 MB.';
+  field('save-submit').hidden = Boolean(article && (article.status !== 'draft' || article.author_id !== member?.id));
   articleForm.elements.title.value = article?.title ?? '';
   articleForm.elements.body.value = article?.body ?? '';
   field('draft-heading').textContent = article ? 'Edit article' : 'New article';
@@ -227,12 +359,7 @@ function renderArticles() {
     if (article.status === 'draft' && article.author_id === member.id) {
       actions.append(action('Submit for review', () => updateStatus(article, 'submitted')));
     }
-    if (canReview && article.status === 'submitted') {
-      actions.append(action('Approve', () => updateStatus(article, 'approved')));
-    }
-    if (canReview && article.status !== 'draft') {
-      actions.append(action('Return to draft', () => updateStatus(article, 'draft')));
-    }
+    actions.append(action(canReview ? 'Open review' : 'View feedback', () => openReview(article)));
     card.append(details, meta, actions);
     list.append(card);
   }
@@ -349,15 +476,29 @@ async function start() {
     void run(event.submitter, async () => {
       const data = new FormData(articleForm);
       const values = { title: data.get('title').trim(), body: data.get('body').trim() };
+      if (!values.title || !values.body) throw new Error('Enter a title and article text.');
+      const coverFile = data.get('cover');
+      if (coverFile.size) values.cover_path = await uploadFile('editorial-covers', coverFile, coverTypes, 5 * 1024 * 1024);
       const articles = client.from('editorial_articles');
       const { data: saved, error } = editingId
         ? await articles.update(values).eq('id', editingId).select('id')
         : await articles.insert(values).select('id');
-      if (error) throw error;
-      if (!saved.length) throw new Error('This article is no longer editable.');
+      if (error || !saved.length) {
+        if (values.cover_path && (!error || error.code)) await client.storage.from('editorial-covers').remove([values.cover_path]);
+        throw error || new Error('This article is no longer editable.');
+      }
+      if (event.submitter.value === 'submit') {
+        try {
+          await updateStatus({ id: saved[0].id, status: 'draft' }, 'submitted');
+        } catch (error) {
+          editingId = saved[0].id;
+          articleForm.elements.cover.value = '';
+          throw new Error(`Draft saved. Submission failed: ${error.message}`);
+        }
+      }
       editArticle();
       await listArticles();
-      notice('Article saved.');
+      notice(event.submitter.value === 'submit' ? 'Article submitted for review.' : 'Article saved.');
     });
   });
   const { data, error } = await client.auth.getSession();

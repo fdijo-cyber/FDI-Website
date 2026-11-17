@@ -20,7 +20,18 @@ async function showMedia() {
     link.textContent = entry.kind === 'video' ? 'Watch video' : 'Listen to podcast';
     const youtubeId = url.hostname === 'youtu.be' ? url.pathname.slice(1)
       : ['www.youtube.com', 'youtube.com'].includes(url.hostname) ? url.searchParams.get('v') : null;
-    if (youtubeId && /^[\w-]{11}$/.test(youtubeId)) {
+    const uploaded = url.origin === new URL(editorialConfig.url).origin
+      && url.pathname.startsWith('/storage/v1/object/public/editorial-media/');
+    if (uploaded) {
+      const player = document.createElement(entry.kind === 'video' ? 'video' : 'audio');
+      player.controls = true;
+      player.preload = 'metadata';
+      player.src = url.href;
+      player.setAttribute('aria-label', entry.title);
+      player.style.width = '100%';
+      if (entry.kind === 'video') player.className = 'video-player';
+      card.append(player);
+    } else if (youtubeId && /^[\w-]{11}$/.test(youtubeId)) {
       const video = document.createElement('iframe');
       video.className = 'video-player';
       video.title = entry.title;

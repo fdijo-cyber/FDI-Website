@@ -73,3 +73,10 @@ body:has(.desk) { background: #edf2fb; }
   .studio-split, #articles .desk-article { grid-template-columns: 1fr; }
   .queue-meta { justify-content: flex-start; }
 }
+
+.review-dialog { width: min(700px, calc(100% - 32px)); max-height: 88vh; border: 1px solid #aebedb; border-radius: 12px; padding: 24px; color: var(--ink); }
+.review-dialog::backdrop { background: #061f5066; }
+#review-cover { max-height: 340px; object-fit: contain; margin-block: 12px; border-radius: 8px; }
+#review-body, #review-comments p { white-space: pre-wrap; overflow-wrap: anywhere; }
+#review-body { margin-bottom: 20px; line-height: 1.6; }
+#review-comments { margin-block: 12px; }
